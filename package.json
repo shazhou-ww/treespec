@@ -1,0 +1,25 @@
+{
+  "name": "treespec",
+  "version": "0.0.1",
+  "description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
+  "main": "index.js",
+  "bin": {
+    "treespec": "bin/treespec.js"
+  },
+  "keywords": [
+    "testing",
+    "spec",
+    "tree",
+    "docker",
+    "state",
+    "cli",
+    "e2e"
+  ],
+  "author": "Shazhou Family",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://git.shazhou.work/shazhou/treespec.git"
+  },
+  "homepage": "https://git.shazhou.work/shazhou/treespec"
+}
