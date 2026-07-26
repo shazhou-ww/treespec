@@ -12,8 +12,11 @@ export interface TreeNode {
 	name: string;
 	/** Path relative to the specs root. */
 	path: string;
-	/** Parsed Spec from spec.yaml. */
-	spec: Spec;
+	/**
+	 * Parsed Spec from spec.yaml.
+	 * Undefined = organizational node (pass-through; no steps / commit).
+	 */
+	spec?: Spec;
 	children: TreeNode[];
 }
 
@@ -53,9 +56,10 @@ function toPosix(path: string): string {
 }
 
 /**
- * Recursively scan `specsRoot` for directories containing `spec.yaml`.
- * Root-level directories under the specs root become forest roots.
- * Directories missing `spec.yaml` are reported as errors.
+ * Recursively scan `specsRoot` for test / organizational nodes.
+ * - Has `spec.yaml` → test node
+ * - No `spec.yaml` but has subdirectories → organizational node (pass-through)
+ * - No `spec.yaml` and no subdirectories → error
  */
 export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 	const errors: ScanError[] = [];
@@ -78,73 +82,73 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 		};
 	}
 
-	const nodesByPath = new Map<string, TreeNode>();
-
-	async function collect(absDir: string, relPath: string): Promise<void> {
+	async function scanDir(absDir: string, relPath: string): Promise<TreeNode | null> {
 		const childNames = await listSubdirs(absDir);
-
-		if (relPath !== '.') {
-			const posixPath = toPosix(relPath);
-			const specPath = join(absDir, 'spec.yaml');
-			if (!(await pathExists(specPath))) {
-				errors.push({ path: posixPath, message: 'Missing spec.yaml' });
-			} else {
-				try {
-					const yaml = await readFile(specPath, 'utf8');
-					const spec = parseSpec(yaml);
-					for (const name of spec.env ?? []) {
-						envVars.add(name);
-					}
-					nodesByPath.set(posixPath, {
-						name: basename(relPath),
-						path: posixPath,
-						spec,
-						children: [],
-					});
-				} catch (err) {
-					const message = err instanceof Error ? err.message : String(err);
-					errors.push({
-						path: posixPath,
-						message: `Failed to parse spec.yaml: ${message}`,
-					});
-				}
-			}
-		}
+		const children: TreeNode[] = [];
 
 		for (const childName of childNames) {
 			const childAbs = join(absDir, childName);
 			const childRel = relPath === '.' ? childName : `${relPath}/${childName}`;
-			await collect(childAbs, childRel);
-		}
-	}
-
-	await collect(specsRoot, '.');
-
-	// Assemble forest: parent = longest existing ancestor path with a node.
-	const sortedPaths = [...nodesByPath.keys()].sort(
-		(a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b),
-	);
-
-	const trees: TreeNode[] = [];
-
-	for (const path of sortedPaths) {
-		const node = nodesByPath.get(path)!;
-		const parts = path.split('/');
-		let parent: TreeNode | undefined;
-		for (let i = parts.length - 1; i >= 1; i--) {
-			const ancestorPath = parts.slice(0, i).join('/');
-			const ancestor = nodesByPath.get(ancestorPath);
-			if (ancestor) {
-				parent = ancestor;
-				break;
+			const child = await scanDir(childAbs, childRel);
+			if (child) {
+				children.push(child);
 			}
 		}
-		if (parent) {
-			parent.children.push(node);
-		} else {
-			trees.push(node);
+
+		// Specs root itself is not a node — return a synthetic holder via children only.
+		if (relPath === '.') {
+			return {
+				name: '.',
+				path: '.',
+				children,
+			};
 		}
+
+		const posixPath = toPosix(relPath);
+		const specPath = join(absDir, 'spec.yaml');
+		const hasSpec = await pathExists(specPath);
+
+		if (hasSpec) {
+			try {
+				const yaml = await readFile(specPath, 'utf8');
+				const spec = parseSpec(yaml);
+				for (const name of spec.env ?? []) {
+					envVars.add(name);
+				}
+				return {
+					name: basename(relPath),
+					path: posixPath,
+					spec,
+					children,
+				};
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				errors.push({
+					path: posixPath,
+					message: `Failed to parse spec.yaml: ${message}`,
+				});
+				return null;
+			}
+		}
+
+		if (children.length > 0) {
+			// Organizational node — pass-through, no steps / commit.
+			return {
+				name: basename(relPath),
+				path: posixPath,
+				children,
+			};
+		}
+
+		errors.push({
+			path: posixPath,
+			message: 'Empty node: no spec.yaml and no subdirectories',
+		});
+		return null;
 	}
+
+	const rootHolder = await scanDir(specsRoot, '.');
+	const trees = rootHolder?.children ?? [];
 
 	function sortChildren(nodes: TreeNode[]): void {
 		nodes.sort((a, b) => a.name.localeCompare(b.name));
@@ -161,7 +165,7 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 	};
 }
 
-/** Count nodes in a forest. */
+/** Count nodes in a forest (including organizational nodes). */
 export function countNodes(trees: TreeNode[]): number {
 	let count = 0;
 	function walk(nodes: TreeNode[]): void {
@@ -174,6 +178,25 @@ export function countNodes(trees: TreeNode[]): number {
 	return count;
 }
 
+/** Find a node by path relative to the specs root (posix, optional trailing slash). */
+export function findNode(trees: TreeNode[], targetPath: string): TreeNode | undefined {
+	const normalized = toPosix(targetPath).replace(/\/+$/, '');
+	let found: TreeNode | undefined;
+
+	function walk(nodes: TreeNode[]): void {
+		for (const n of nodes) {
+			if (n.path === normalized) {
+				found = n;
+				return;
+			}
+			walk(n.children);
+			if (found) return;
+		}
+	}
+	walk(trees);
+	return found;
+}
+
 /** Render a forest as an indented tree string. */
 export function formatForest(trees: TreeNode[]): string {
 	const lines: string[] = [];
@@ -182,9 +205,13 @@ export function formatForest(trees: TreeNode[]): string {
 			const isLast = index === nodes.length - 1;
 			const branch = isLast ? '└── ' : '├── ';
 			const indent = isLastList.map((last) => (last ? '    ' : '│   ')).join('');
-			const env = node.spec.env?.length ? ` [env: ${node.spec.env.join(', ')}]` : '';
-			const desc = node.spec.description ? ` — ${node.spec.description}` : '';
-			lines.push(`${indent}${branch}${node.name}${desc}${env}`);
+			if (!node.spec) {
+				lines.push(`${indent}${branch}${node.name} [org]`);
+			} else {
+				const env = node.spec.env?.length ? ` [env: ${node.spec.env.join(', ')}]` : '';
+				const desc = node.spec.description ? ` — ${node.spec.description}` : '';
+				lines.push(`${indent}${branch}${node.name}${desc}${env}`);
+			}
 			walk(node.children, [...isLastList, isLast]);
 		});
 	}

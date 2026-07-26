@@ -1,7 +1,4 @@
-description: "Add a persona"
+description: "transition fail fixture (exit 1, no assert)"
 steps:
-  - command: "myapp persona add assistant"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "persona 'assistant' added" }
+  - type: exec
+    command: "exit 1"

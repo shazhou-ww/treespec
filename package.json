@@ -29,11 +29,13 @@
 	"homepage": "https://git.shazhou.work/shazhou/treespec",
 	"dependencies": {
 		"dockerode": "^5.0.1",
+		"jsonata": "^2.2.2",
 		"yaml": "^2.8.0",
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
 		"@types/dockerode": "^4.0.1",
+		"@types/jsonata": "^1.5.1",
 		"@types/node": "^26.1.1",
 		"tsx": "^4.20.3",
 		"typescript": "^5.8.3"

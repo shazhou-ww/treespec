@@ -1,9 +1,8 @@
-description: "Show CLI help"
+description: "echo hello (Phase 3 fixture)"
 steps:
   - type: exec
-    command: "myapp --help"
+    command: "echo hello"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "Usage:" }
-        - { path: "exit_code", regex: "^0$" }
+        - { path: "stdout", regex: "hello" }

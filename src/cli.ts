@@ -4,18 +4,28 @@
 
 import { access } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { buildImage, imageExists, type BuildProgressEvent } from './docker.js';
 import { loadEnvFile, mergeEnv } from './env.js';
+import { runNode, type NodeResult } from './runner.js';
 import { parseConfig } from './schema.js';
-import { countNodes, formatForest, scanSpecs } from './scanner.js';
+import { countNodes, findNode, formatForest, scanSpecs, type TreeNode } from './scanner.js';
+
+const RESET = '\x1b[0m';
+const BOLD = '\x1b[1m';
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const YELLOW = '\x1b[33m';
+const DIM = '\x1b[2m';
+const CYAN = '\x1b[36m';
 
 export function printHelp(): void {
 	console.log(`treespec — tree-structured, stateful test system
 
 Usage:
   treespec validate [--config <path>]              Validate treespec.yaml and the test tree
-  treespec run [--rebuild] [--env-file <path>]     Build base image (Phase 2: build only)
+  treespec run [path] [--rebuild] [--env-file <path>]
+                                                   Execute node(s) (Phase 3: single-node)
   treespec help                                    Show this help
 
 Options:
@@ -33,6 +43,21 @@ function getFlagValue(args: string[], name: string): string | undefined {
 
 function hasFlag(args: string[], name: string): boolean {
 	return args.includes(name);
+}
+
+/** Positional path args (not flags / flag values). */
+function getPositionalArgs(args: string[]): string[] {
+	const flagWithValue = new Set(['--config', '--env-file']);
+	const result: string[] = [];
+	for (let i = 0; i < args.length; i++) {
+		const a = args[i]!;
+		if (a.startsWith('-')) {
+			if (flagWithValue.has(a)) i++;
+			continue;
+		}
+		result.push(a);
+	}
+	return result;
 }
 
 async function loadProjectConfig(args: string[]): Promise<{
@@ -58,6 +83,38 @@ async function loadProjectConfig(args: string[]): Promise<{
 		const message = err instanceof Error ? err.message : String(err);
 		return { error: `invalid treespec.yaml: ${message}`, code: 1 };
 	}
+}
+
+function colorStatus(status: NodeResult['status']): string {
+	if (status === 'PASS') return `${GREEN}${BOLD}PASS${RESET}`;
+	if (status === 'FAIL') return `${RED}${BOLD}FAIL${RESET}`;
+	return `${YELLOW}${BOLD}SKIP${RESET}`;
+}
+
+function toPosix(path: string): string {
+	return path.split(sep).join('/');
+}
+
+/**
+ * Resolve a user-supplied path to a node path relative to the specs root.
+ */
+function resolveNodePath(
+	userPath: string,
+	specsRoot: string,
+	configDir: string,
+): string {
+	const abs = resolve(process.cwd(), userPath);
+	const relToSpecs = relative(specsRoot, abs);
+	if (relToSpecs && !relToSpecs.startsWith('..') && !relToSpecs.startsWith('/')) {
+		return toPosix(relToSpecs).replace(/\/+$/, '');
+	}
+	const relToConfig = relative(configDir, abs);
+	const specsName = toPosix(relative(configDir, specsRoot));
+	if (relToConfig === specsName || relToConfig.startsWith(`${specsName}/`)) {
+		return toPosix(relToConfig.slice(specsName.length).replace(/^\//, '')).replace(/\/+$/, '') || '.';
+	}
+	// Treat as path relative to specs root (e.g. help-command or provider-add/model-add)
+	return toPosix(userPath).replace(/\/+$/, '').replace(/^\.\//, '');
 }
 
 export async function runValidate(args: string[]): Promise<number> {
@@ -135,6 +192,35 @@ function printBuildProgress(event: BuildProgressEvent): void {
 	}
 }
 
+async function ensureBaseImage(
+	config: ReturnType<typeof parseConfig>,
+	configDir: string,
+	rebuild: boolean,
+): Promise<number> {
+	const exists = await imageExists(config.image.tag);
+
+	if (exists && !rebuild) {
+		console.log(`skipping build, tag exists: ${config.image.tag}`);
+		return 0;
+	}
+
+	if (exists && rebuild) {
+		console.log(`Rebuilding image: ${config.image.tag}`);
+	} else {
+		console.log(`Building image: ${config.image.tag}`);
+	}
+
+	const tag = await buildImage(config.image, configDir, printBuildProgress);
+	console.log();
+	console.log(`✓ Built ${tag}`);
+	return 0;
+}
+
+function printNodeResult(node: TreeNode, result: NodeResult): void {
+	console.log();
+	console.log(`${BOLD}${node.path}${RESET}  ${colorStatus(result.status)}  ${DIM}${result.reason}${RESET}`);
+}
+
 export async function runRun(args: string[]): Promise<number> {
 	const loaded = await loadProjectConfig(args);
 	if ('error' in loaded) {
@@ -145,6 +231,7 @@ export async function runRun(args: string[]): Promise<number> {
 	const { configPath, configDir, config } = loaded;
 	const rebuild = hasFlag(args, '--rebuild');
 	const envFileFlag = getFlagValue(args, '--env-file');
+	const positionals = getPositionalArgs(args);
 	const envPath = envFileFlag
 		? resolve(process.cwd(), envFileFlag)
 		: join(configDir, '.env');
@@ -166,29 +253,79 @@ export async function runRun(args: string[]): Promise<number> {
 		}
 	}
 
+	const specsRoot = resolve(configDir, config.specs);
+
 	console.log(`Config: ${configPath}`);
 	console.log(`Image:  ${config.image.tag}`);
 	console.log(`Dockerfile: ${config.image.dockerfile}`);
+	console.log(`Specs:  ${specsRoot}`);
 	console.log();
 
 	try {
-		const exists = await imageExists(config.image.tag);
+		const buildCode = await ensureBaseImage(config, configDir, rebuild);
+		if (buildCode !== 0) return buildCode;
 
-		if (exists && !rebuild) {
-			console.log(`skipping build, tag exists: ${config.image.tag}`);
-			console.log('✓ Ready');
+		const scanned = await scanSpecs(specsRoot);
+		if (scanned.errors.length > 0) {
+			console.error(`Errors (${scanned.errors.length}):`);
+			for (const err of scanned.errors) {
+				console.error(`  ✗ ${err.path}: ${err.message}`);
+			}
+			return 1;
+		}
+
+		let nodesToRun: TreeNode[];
+		if (positionals.length === 0) {
+			nodesToRun = scanned.trees;
+		} else {
+			nodesToRun = [];
+			for (const p of positionals) {
+				const nodePath = resolveNodePath(p, specsRoot, configDir);
+				const node = findNode(scanned.trees, nodePath);
+				if (!node) {
+					console.error(`Error: node not found: ${p} (resolved: ${nodePath})`);
+					return 1;
+				}
+				nodesToRun.push(node);
+			}
+		}
+
+		if (nodesToRun.length === 0) {
+			console.log('No nodes to run.');
 			return 0;
 		}
 
-		if (exists && rebuild) {
-			console.log(`Rebuilding image: ${config.image.tag}`);
-		} else {
-			console.log(`Building image: ${config.image.tag}`);
+		let anyNonPass = false;
+
+		for (const node of nodesToRun) {
+			console.log();
+			console.log(`${CYAN}${BOLD}▶ ${node.path}${RESET}${node.spec?.description ? ` — ${node.spec.description}` : !node.spec ? ' [org]' : ''}`);
+
+			const result = await runNode(node, config.image.tag, env, {
+				onStep: ({ index, stepSummary, stepResult, verdict, reason }) => {
+					const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+					const exit = `${DIM}exit ${stepResult.exit_code}${RESET}`;
+					console.log(`  ${mark} step ${index + 1}: ${stepSummary}  ${exit}`);
+					if (verdict === 'FAIL') {
+						console.log(`    ${RED}${reason}${RESET}`);
+					} else {
+						console.log(`    ${DIM}${reason}${RESET}`);
+					}
+				},
+			});
+
+			printNodeResult(node, result);
+			if (result.status !== 'PASS') {
+				anyNonPass = true;
+			}
 		}
 
-		const tag = await buildImage(config.image, configDir, printBuildProgress);
 		console.log();
-		console.log(`✓ Built ${tag}`);
+		if (anyNonPass) {
+			console.log(`${RED}${BOLD}Done${RESET} — one or more nodes FAIL/SKIP`);
+			return 1;
+		}
+		console.log(`${GREEN}${BOLD}Done${RESET} — all nodes PASS`);
 		return 0;
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
