@@ -1,7 +1,7 @@
 description: "sends HTTP POST and asserts JSON response"
 steps:
   - type: exec
-    command: "treespec run --config /specs/sends-post-request/assets/http-post-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/http-post-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

@@ -1,7 +1,7 @@
 description: "executes a command and asserts stdout"
 steps:
   - type: exec
-    command: "treespec run --config /specs/executes-command/assets/exec-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/exec-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

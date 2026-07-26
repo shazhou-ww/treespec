@@ -1,7 +1,7 @@
 description: "verifies pruning when a node fails"
 steps:
   - type: exec
-    command: "treespec run --config /specs/verifies-pruning/assets/pruning-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1; true"
+    command: "treespec run --config assets/pruning-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1; true"
     assert:
       type: regex
       conditions:

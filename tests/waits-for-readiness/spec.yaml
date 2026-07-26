@@ -1,7 +1,7 @@
 description: "waits for background process to become ready"
 steps:
   - type: exec
-    command: "treespec run --config /specs/waits-for-readiness/assets/wait-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/wait-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

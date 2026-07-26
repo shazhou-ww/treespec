@@ -3,7 +3,7 @@ env:
   - SILICONFLOW_API_KEY
 steps:
   - type: exec
-    command: "treespec run --config /specs/judges-with-llm/assets/llm-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/llm-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

@@ -1,7 +1,7 @@
 description: "sends HTTP GET and asserts response"
 steps:
   - type: exec
-    command: "treespec run --config /specs/sends-get-request/assets/http-get-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/http-get-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

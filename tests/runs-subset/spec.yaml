@@ -1,7 +1,7 @@
 description: "runs a subset of the test tree by path"
 steps:
   - type: exec
-    command: "treespec run --config /specs/runs-subset/assets/subset-fixture/treespec.yaml beta --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config assets/subset-fixture/treespec.yaml beta --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:
