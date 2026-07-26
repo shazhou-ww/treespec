@@ -1,4 +1,4 @@
-description: "LLM assertion: output contains the word hello"
+description: "judges command output with LLM"
 env:
   - SILICONFLOW_API_KEY
 steps:

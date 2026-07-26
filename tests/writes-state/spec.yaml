@@ -1,4 +1,4 @@
-description: "write parent state for children to inherit"
+description: "writes state via docker commit for children to inherit"
 steps:
   - type: exec
     command: "echo parent-data > /tmp/state"

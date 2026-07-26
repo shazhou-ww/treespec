@@ -1,4 +1,4 @@
-description: "should be SKIPPED when persona-add fails"
+description: "skips child when parent fails"
 steps:
   - type: exec
     command: "echo should-not-run"

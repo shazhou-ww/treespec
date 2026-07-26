@@ -1,4 +1,4 @@
-description: "deep leaf still sees committed state"
+description: "reads committed state from ancestor chain"
 steps:
   - type: exec
     command: "grep -q parent-data /tmp/state && grep -q child-data /tmp/state"

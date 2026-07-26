@@ -1,0 +1,4 @@
+description: "prunes subtree when a node fails"
+steps:
+  - type: exec
+    command: "exit 1"

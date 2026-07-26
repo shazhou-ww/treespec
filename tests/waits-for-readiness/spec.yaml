@@ -1,4 +1,4 @@
-description: "Wait polling — background readiness then cat with wait"
+description: "waits for background process to become ready"
 steps:
   - type: exec
     command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"

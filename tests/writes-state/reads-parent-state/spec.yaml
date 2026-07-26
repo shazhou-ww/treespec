@@ -1,4 +1,4 @@
-description: "read parent state via committed image"
+description: "reads parent committed state"
 steps:
   - type: exec
     command: "cat /tmp/state"

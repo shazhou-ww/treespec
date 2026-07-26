@@ -1,4 +1,4 @@
-description: "inherit grandparent+parent state"
+description: "reads grandparent and parent committed state"
 steps:
   - type: exec
     command: "cat /tmp/state"

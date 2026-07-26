@@ -1,4 +1,4 @@
-description: "echo hello (leaf, no commit)"
+description: "executes a command and asserts stdout"
 steps:
   - type: exec
     command: "echo hello"

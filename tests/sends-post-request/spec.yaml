@@ -1,4 +1,4 @@
-description: "HTTP POST with JSON body — jsonata on response"
+description: "sends HTTP POST and asserts JSON response"
 steps:
   - type: http
     request:
@@ -6,7 +6,7 @@ steps:
       url: "https://httpbingo.org/post"
       headers:
         Content-Type: "application/json"
-        X-Test-Token: "treespec-phase5"
+        X-Test-Token: "treespec-test"
       body:
         hello: "world"
         source: "treespec"

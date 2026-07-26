@@ -1,4 +1,0 @@
-description: "intentional fail — prunes children"
-steps:
-  - type: exec
-    command: "exit 1"

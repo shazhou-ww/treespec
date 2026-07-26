@@ -1,4 +1,4 @@
-description: "HTTP GET against httpbingo — regex on body"
+description: "sends HTTP GET and asserts response"
 steps:
   - type: http
     request:
