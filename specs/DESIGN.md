@@ -206,11 +206,14 @@ TestCase 的**任何判定失败**（step assert 或 postcon assert），都会�
 
 ### 4.4 树的组织方式
 
-**目录树 = 测试树。** 每个含 `spec.yaml` 的目录是一个节点，目录嵌套 = 父子关系。
+**目录树 = 测试树。** 目录嵌套 = 父子关系。
+
+- **有 `spec.yaml`** = 测试节点（执行 steps + commit）
+- **无 `spec.yaml`** = 组织节点（纯分组，直通 parent tag 给子节点，不执行不 commit）
 
 ```
 tests/
-  provider-add/                 # 根节点
+  provider-add/                 # 测试节点
     spec.yaml
     README.md                   # 可选：文档说明
     model-add/
@@ -233,15 +236,33 @@ tests/
     spec.yaml
     persona-remove/
       spec.yaml
-  help-command/                 # 叶子节点，无子目录
+  self-test/                    # 组织节点 — 无 spec.yaml，直通 S0
+    version/
+      spec.yaml                 # 测试节点
+    validate-ok/
+      spec.yaml
+  help-command/                 # 叶子测试节点
     spec.yaml
 ```
 
 **规则：**
-- 每个目录含一个 `spec.yaml` = 一个测试用例
-- 目录名 = 用例名（无需在 spec.yaml 中声明 `name`）
-- 子目录的 parent = 直接父目录（无需 `parent` 字段）
+- 有 `spec.yaml` 的目录 = 测试节点（有 steps、可 commit）
+- 无 `spec.yaml` 但有子目录 = 组织节点（直通 parent tag，不执行不 commit）
+- 无 `spec.yaml` 且无子目录 = 报错（空节点无意义）
+- 目录名 = 用例名（无需声明 `name`）
 - 可选 `.md` 文件放在同目录做文档说明
+
+**组织节点执行逻辑：**
+```
+execute(node, parent_tag):
+  if node has spec.yaml:
+    # 正常流程：steps → commit → postcon → children
+    ...
+  else:
+    # 组织节点：直通 parent_tag 给子节点用
+    for child in node.children:
+      execute(child, parent_tag)
+```
 
 **消除了：** parent 引用、parent 校验、循环依赖检测——文件系统天然保证结构正确。
 
