@@ -1,0 +1,4 @@
+image:
+  dockerfile: tests/Dockerfile
+  tag: validate-fixture:base
+specs: specs

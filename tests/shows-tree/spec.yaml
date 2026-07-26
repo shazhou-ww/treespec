@@ -1,11 +1,12 @@
 description: "shows test tree structure with tree command"
 steps:
   - type: exec
-    command: "treespec tree --config /app/treespec.yaml 2>&1"
+    command: "treespec tree --config assets/tree-fixture/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "base image" }
-        - { path: "stdout", regex: "executes-command" }
-        - { path: "stdout", regex: "commits-state" }
+        - { path: "stdout", regex: "alpha" }
+        - { path: "stdout", regex: 'group \[org\]' }
+        - { path: "stdout", regex: "beta" }
         - { path: "exit_code", regex: "^0$" }

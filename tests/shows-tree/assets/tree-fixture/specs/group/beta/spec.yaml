@@ -1,0 +1,8 @@
+description: "beta under org node"
+steps:
+  - type: exec
+    command: "echo beta"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "beta" }
