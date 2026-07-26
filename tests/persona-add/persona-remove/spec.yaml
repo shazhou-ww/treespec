@@ -1,8 +1,8 @@
-description: "Remove the persona"
+description: "should be SKIPPED when persona-add fails"
 steps:
   - type: exec
-    command: "myapp persona remove assistant"
+    command: "echo should-not-run"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "removed" }
+        - { path: "stdout", regex: "should-not-run" }

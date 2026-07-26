@@ -203,3 +203,93 @@ export async function pullImageIfMissing(tag: string): Promise<void> {
 		throw formatDockerError(err);
 	}
 }
+
+const EPHEMERAL_REPO = 'treespec/ephemeral';
+
+/**
+ * Build an ephemeral image tag from a node path relative to the specs root.
+ * e.g. `provider-add/model-add` → `treespec/ephemeral:provider-add-model-add`
+ */
+export function ephemeralTagForPath(nodePath: string): string {
+	const tag = nodePath.replace(/^\/+|\/+$/g, '').replace(/\//g, '-');
+	return `${EPHEMERAL_REPO}:${tag}`;
+}
+
+/**
+ * Commit a running container to `imageTag` (repo:tag).
+ */
+export async function commitContainer(
+	containerId: string,
+	imageTag: string,
+): Promise<string> {
+	const docker = getDocker();
+	const colon = imageTag.lastIndexOf(':');
+	const repo = colon === -1 ? imageTag : imageTag.slice(0, colon);
+	const tag = colon === -1 ? 'latest' : imageTag.slice(colon + 1);
+
+	try {
+		const container = docker.getContainer(containerId);
+		await container.commit({
+			repo,
+			tag,
+			comment: 'treespec ephemeral',
+			author: 'treespec',
+		});
+		return imageTag;
+	} catch (err) {
+		throw formatDockerError(err);
+	}
+}
+
+/**
+ * Force-remove an image tag (ignore if already gone).
+ */
+export async function removeImage(imageTag: string): Promise<void> {
+	const docker = getDocker();
+	try {
+		await docker.getImage(imageTag).remove({ force: true });
+	} catch (err) {
+		const statusCode =
+			err && typeof err === 'object' && 'statusCode' in err
+				? (err as { statusCode?: number }).statusCode
+				: undefined;
+		if (statusCode === 404) {
+			return;
+		}
+		throw formatDockerError(err);
+	}
+}
+
+/**
+ * List all local `treespec/ephemeral:*` image tags.
+ */
+export async function listEphemeralTags(): Promise<string[]> {
+	const docker = getDocker();
+	try {
+		const images = await docker.listImages({
+			filters: { reference: [`${EPHEMERAL_REPO}:*`] },
+		});
+		const tags: string[] = [];
+		for (const img of images) {
+			for (const rt of img.RepoTags ?? []) {
+				if (rt.startsWith(`${EPHEMERAL_REPO}:`)) {
+					tags.push(rt);
+				}
+			}
+		}
+		return [...new Set(tags)].sort();
+	} catch (err) {
+		throw formatDockerError(err);
+	}
+}
+
+/**
+ * Remove all `treespec/ephemeral:*` tags. Returns the tags that were removed.
+ */
+export async function cleanEphemeralTags(): Promise<string[]> {
+	const tags = await listEphemeralTags();
+	for (const tag of tags) {
+		await removeImage(tag);
+	}
+	return tags;
+}

@@ -5,11 +5,23 @@
 import { access } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import { buildImage, imageExists, type BuildProgressEvent } from './docker.js';
+import {
+	buildImage,
+	cleanEphemeralTags,
+	imageExists,
+	type BuildProgressEvent,
+} from './docker.js';
 import { loadEnvFile, mergeEnv } from './env.js';
-import { runNode, type NodeResult } from './runner.js';
+import { runForest, type NodeResult, type RunSummary } from './runner.js';
 import { parseConfig } from './schema.js';
-import { countNodes, findNode, formatForest, scanSpecs, type TreeNode } from './scanner.js';
+import {
+	countNodes,
+	coveringSubtree,
+	findNode,
+	formatForest,
+	scanSpecs,
+	type TreeNode,
+} from './scanner.js';
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -24,14 +36,16 @@ export function printHelp(): void {
 
 Usage:
   treespec validate [--config <path>]              Validate treespec.yaml and the test tree
-  treespec run [path] [--rebuild] [--env-file <path>]
-                                                   Execute node(s) (Phase 3: single-node)
+  treespec run [paths...] [--rebuild] [--env-file <path>] [--keep-tags]
+                                                   DFS-execute the test tree (or covering subtrees)
+  treespec clean                                   Remove all treespec/ephemeral:* tags
   treespec help                                    Show this help
 
 Options:
   --config <path>     Path to treespec.yaml (default: ./treespec.yaml)
   --rebuild           Force rebuild of the base image even if the tag exists
   --env-file <path>   Override .env path (default: <config-dir>/.env)
+  --keep-tags         Keep ephemeral image tags after the run (debug)
 `);
 }
 
@@ -115,6 +129,65 @@ function resolveNodePath(
 	}
 	// Treat as path relative to specs root (e.g. help-command or provider-add/model-add)
 	return toPosix(userPath).replace(/\/+$/, '').replace(/^\.\//, '');
+}
+
+/** Simple glob match: * (within segment) and ** (across segments). */
+function matchGlob(pattern: string, value: string): boolean {
+	const escapeRegex = (s: string) => s.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+	const parts = pattern.split('/');
+	const regexParts = parts.map((part) => {
+		if (part === '**') return '.*';
+		return part.split('*').map(escapeRegex).join('[^/]*');
+	});
+	const re = new RegExp(`^${regexParts.join('/')}$`);
+	return re.test(value);
+}
+
+function collectAllPaths(trees: TreeNode[]): string[] {
+	const paths: string[] = [];
+	function walk(nodes: TreeNode[]): void {
+		for (const n of nodes) {
+			paths.push(n.path);
+			walk(n.children);
+		}
+	}
+	walk(trees);
+	return paths;
+}
+
+/**
+ * Expand positional args (literal paths and globs) to node paths relative to specs root.
+ */
+function resolveTargetPaths(
+	positionals: string[],
+	trees: TreeNode[],
+	specsRoot: string,
+	configDir: string,
+): { paths: string[]; error?: string } {
+	const allPaths = collectAllPaths(trees);
+	const resolved = new Set<string>();
+
+	for (const p of positionals) {
+		const hasGlob = /[*?]/.test(p) || p.includes('**');
+		if (hasGlob) {
+			const pattern = resolveNodePath(p, specsRoot, configDir);
+			const matches = allPaths.filter((path) => matchGlob(pattern, path));
+			if (matches.length === 0) {
+				return { paths: [], error: `no nodes matched glob: ${p}` };
+			}
+			for (const m of matches) resolved.add(m);
+			continue;
+		}
+
+		const nodePath = resolveNodePath(p, specsRoot, configDir);
+		const node = findNode(trees, nodePath);
+		if (!node) {
+			return { paths: [], error: `node not found: ${p} (resolved: ${nodePath})` };
+		}
+		resolved.add(node.path);
+	}
+
+	return { paths: [...resolved] };
 }
 
 export async function runValidate(args: string[]): Promise<number> {
@@ -216,9 +289,14 @@ async function ensureBaseImage(
 	return 0;
 }
 
-function printNodeResult(node: TreeNode, result: NodeResult): void {
+function printSummary(summary: RunSummary): void {
 	console.log();
-	console.log(`${BOLD}${node.path}${RESET}  ${colorStatus(result.status)}  ${DIM}${result.reason}${RESET}`);
+	console.log(
+		`${BOLD}Summary${RESET}: ${summary.total} total, ` +
+			`${GREEN}${summary.passed} passed${RESET}, ` +
+			`${RED}${summary.failed} failed${RESET}, ` +
+			`${YELLOW}${summary.skipped} skipped${RESET}`,
+	);
 }
 
 export async function runRun(args: string[]): Promise<number> {
@@ -230,6 +308,7 @@ export async function runRun(args: string[]): Promise<number> {
 
 	const { configPath, configDir, config } = loaded;
 	const rebuild = hasFlag(args, '--rebuild');
+	const keepTags = hasFlag(args, '--keep-tags');
 	const envFileFlag = getFlagValue(args, '--env-file');
 	const positionals = getPositionalArgs(args);
 	const envPath = envFileFlag
@@ -259,6 +338,9 @@ export async function runRun(args: string[]): Promise<number> {
 	console.log(`Image:  ${config.image.tag}`);
 	console.log(`Dockerfile: ${config.image.dockerfile}`);
 	console.log(`Specs:  ${specsRoot}`);
+	if (keepTags) {
+		console.log(`Tags:   keep ephemeral (--keep-tags)`);
+	}
 	console.log();
 
 	try {
@@ -274,58 +356,84 @@ export async function runRun(args: string[]): Promise<number> {
 			return 1;
 		}
 
-		let nodesToRun: TreeNode[];
+		let treesToRun: TreeNode[];
 		if (positionals.length === 0) {
-			nodesToRun = scanned.trees;
+			treesToRun = scanned.trees;
 		} else {
-			nodesToRun = [];
-			for (const p of positionals) {
-				const nodePath = resolveNodePath(p, specsRoot, configDir);
-				const node = findNode(scanned.trees, nodePath);
-				if (!node) {
-					console.error(`Error: node not found: ${p} (resolved: ${nodePath})`);
-					return 1;
-				}
-				nodesToRun.push(node);
+			const { paths, error } = resolveTargetPaths(
+				positionals,
+				scanned.trees,
+				specsRoot,
+				configDir,
+			);
+			if (error) {
+				console.error(`Error: ${error}`);
+				return 1;
 			}
+			treesToRun = coveringSubtree(scanned.trees, paths);
+			if (treesToRun.length === 0) {
+				console.log('No nodes to run.');
+				return 0;
+			}
+			console.log(`Covering subtree: ${paths.join(', ')}`);
+			console.log();
 		}
 
-		if (nodesToRun.length === 0) {
+		if (treesToRun.length === 0) {
 			console.log('No nodes to run.');
 			return 0;
 		}
 
-		let anyNonPass = false;
+		const summary = await runForest(treesToRun, config.image.tag, env, {
+			keepTags,
+			output: config.output,
+			specsDir: specsRoot,
+			onNode: ({ node, result, depth }) => {
+				const pad = '  '.repeat(depth);
+				const label = node.spec
+					? node.path
+					: `${node.path} [org]`;
+				const desc = node.spec?.description ? ` ${DIM}— ${node.spec.description}${RESET}` : '';
+				console.log(
+					`${pad}${CYAN}▶${RESET} ${BOLD}${label}${RESET}${desc}  ${colorStatus(result.status)}  ${DIM}${result.reason}${RESET}`,
+				);
+			},
+			onStep: ({ depth, index, stepSummary, stepResult, verdict, reason, context, postconName }) => {
+				const pad = '  '.repeat(depth + 1);
+				const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+				const exit = `${DIM}exit ${stepResult.exit_code}${RESET}`;
+				const prefix = context === 'postcon' ? `postcon ${postconName} ` : '';
+				console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${exit}`);
+				if (verdict === 'FAIL') {
+					console.log(`${pad}  ${RED}${reason}${RESET}`);
+				}
+			},
+		});
 
-		for (const node of nodesToRun) {
-			console.log();
-			console.log(`${CYAN}${BOLD}▶ ${node.path}${RESET}${node.spec?.description ? ` — ${node.spec.description}` : !node.spec ? ' [org]' : ''}`);
+		printSummary(summary);
 
-			const result = await runNode(node, config.image.tag, env, {
-				onStep: ({ index, stepSummary, stepResult, verdict, reason }) => {
-					const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-					const exit = `${DIM}exit ${stepResult.exit_code}${RESET}`;
-					console.log(`  ${mark} step ${index + 1}: ${stepSummary}  ${exit}`);
-					if (verdict === 'FAIL') {
-						console.log(`    ${RED}${reason}${RESET}`);
-					} else {
-						console.log(`    ${DIM}${reason}${RESET}`);
-					}
-				},
-			});
-
-			printNodeResult(node, result);
-			if (result.status !== 'PASS') {
-				anyNonPass = true;
-			}
-		}
-
-		console.log();
-		if (anyNonPass) {
-			console.log(`${RED}${BOLD}Done${RESET} — one or more nodes FAIL/SKIP`);
+		if (summary.failed > 0 || summary.skipped > 0) {
 			return 1;
 		}
-		console.log(`${GREEN}${BOLD}Done${RESET} — all nodes PASS`);
+		return 0;
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(`Error: ${message}`);
+		return 1;
+	}
+}
+
+export async function runClean(_args: string[]): Promise<number> {
+	try {
+		const removed = await cleanEphemeralTags();
+		if (removed.length === 0) {
+			console.log('No treespec/ephemeral:* tags to remove.');
+			return 0;
+		}
+		console.log(`Removed ${removed.length} ephemeral tag(s):`);
+		for (const tag of removed) {
+			console.log(`  ✗ ${tag}`);
+		}
 		return 0;
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
@@ -349,6 +457,10 @@ export async function runCli(argv: string[]): Promise<number> {
 
 	if (command === 'run') {
 		return runRun(args.slice(1));
+	}
+
+	if (command === 'clean') {
+		return runClean(args.slice(1));
 	}
 
 	console.error(`Unknown command: ${command}`);

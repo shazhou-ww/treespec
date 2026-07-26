@@ -1,4 +1,4 @@
-description: "echo hello (Phase 3 fixture)"
+description: "echo hello (leaf, no commit)"
 steps:
   - type: exec
     command: "echo hello"

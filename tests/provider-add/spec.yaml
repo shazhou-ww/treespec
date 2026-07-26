@@ -1,8 +1,18 @@
-description: "write state file (Phase 3 fixture)"
+description: "write parent state for children to inherit"
 steps:
   - type: exec
-    command: "echo test-data > /tmp/state"
+    command: "echo parent-data > /tmp/state"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
+postcon:
+  - name: verify-state-committed
+    steps:
+      - type: exec
+        command: "cat /tmp/state"
+        assert:
+          type: regex
+          conditions:
+            - { path: "stdout", regex: "parent-data" }
+            - { path: "exit_code", regex: "^0$" }

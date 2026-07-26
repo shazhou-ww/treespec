@@ -1,11 +1,8 @@
-description: "Start a session against the prototype"
-env:
-  - SESSION_TOKEN
+description: "deep leaf still sees committed state"
 steps:
   - type: exec
-    command: "myapp session add demo-session --prototype demo --token $SESSION_TOKEN"
+    command: "grep -q parent-data /tmp/state && grep -q child-data /tmp/state"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "session 'demo-session' started" }
         - { path: "exit_code", regex: "^0$" }

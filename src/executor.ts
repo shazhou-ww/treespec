@@ -12,9 +12,22 @@ export interface ExecResult {
 	timedOut: boolean;
 }
 
-export interface RunInContainerOptions {
-	timeout?: number;
+export interface CreateContainerOptions {
 	env?: Record<string, string>;
+	/**
+	 * Absolute path to the specs root directory.
+	 * Mounted read-only at `/specs` inside the container.
+	 */
+	specsDir?: string;
+	/**
+	 * Path relative to the specs root (the case directory).
+	 * Becomes WorkingDir `/specs/<workdir>`.
+	 */
+	workdir?: string;
+}
+
+export interface RunInContainerOptions extends CreateContainerOptions {
+	timeout?: number;
 }
 
 let dockerClient: Docker | null = null;
@@ -59,24 +72,53 @@ function envToArray(env?: Record<string, string>): string[] | undefined {
 /**
  * Create and start a long-running container from `imageTag`.
  * Returns the container id. Caller must remove it.
+ *
+ * When `specsDir` is set, mounts it read-only at `/specs` and sets
+ * WorkingDir to `/specs/<workdir>` (defaults to `/specs`).
  */
 export async function createAndStartContainer(
 	imageTag: string,
-	env?: Record<string, string>,
+	options: CreateContainerOptions = {},
 ): Promise<string> {
 	const docker = getDocker();
+	const env = options.env;
+
+	const hostConfig: {
+		AutoRemove: boolean;
+		Binds?: string[];
+	} = {
+		AutoRemove: false,
+	};
+
+	const createOpts: {
+		Image: string;
+		Cmd: string[];
+		Env?: string[];
+		AttachStdout: boolean;
+		AttachStderr: boolean;
+		Tty: boolean;
+		WorkingDir?: string;
+		HostConfig: typeof hostConfig;
+	} = {
+		Image: imageTag,
+		Cmd: ['sleep', 'infinity'],
+		Env: envToArray(env),
+		AttachStdout: false,
+		AttachStderr: false,
+		Tty: false,
+		HostConfig: hostConfig,
+	};
+
+	if (options.specsDir) {
+		hostConfig.Binds = [`${options.specsDir}:/specs:ro`];
+		const relative = options.workdir && options.workdir !== '.'
+			? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
+			: '';
+		createOpts.WorkingDir = relative ? `/specs/${relative}` : '/specs';
+	}
+
 	try {
-		const container = await docker.createContainer({
-			Image: imageTag,
-			Cmd: ['sleep', 'infinity'],
-			Env: envToArray(env),
-			AttachStdout: false,
-			AttachStderr: false,
-			Tty: false,
-			HostConfig: {
-				AutoRemove: false,
-			},
-		});
+		const container = await docker.createContainer(createOpts);
 		await container.start();
 		return container.id;
 	} catch (err) {
@@ -214,7 +256,11 @@ export async function runInContainer(
 ): Promise<ExecResult> {
 	let containerId: string | undefined;
 	try {
-		containerId = await createAndStartContainer(imageTag, options.env);
+		containerId = await createAndStartContainer(imageTag, {
+			env: options.env,
+			specsDir: options.specsDir,
+			workdir: options.workdir,
+		});
 		return await execInContainer(containerId, command, {
 			timeout: options.timeout,
 			env: options.env,

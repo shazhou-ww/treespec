@@ -1,8 +1,10 @@
-description: "Add a prototype from the model"
+description: "inherit grandparent+parent state"
 steps:
   - type: exec
-    command: "myapp prototype add demo --model claude-4-sonnet"
+    command: "cat /tmp/state"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "prototype 'demo' added" }
+        - { path: "stdout", regex: "parent-data" }
+        - { path: "stdout", regex: "child-data" }
+        - { path: "exit_code", regex: "^0$" }

@@ -1,11 +1,15 @@
-description: "Add claude-4-sonnet model"
-env:
-  - OPENROUTER_API_KEY
+description: "read parent state via committed image"
 steps:
   - type: exec
-    command: "myapp model add claude-4-sonnet --provider openrouter"
+    command: "cat /tmp/state"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "parent-data" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "echo child-data >> /tmp/state"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-        - { path: "stdout", regex: "claude-4-sonnet" }

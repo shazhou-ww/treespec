@@ -34,10 +34,18 @@ export interface ScanResult {
 	envVars: string[];
 }
 
+/** Reserved directory name — assets are mounted via /specs, not tree children. */
+export const ASSETS_DIR = 'assets';
+
 async function listSubdirs(dir: string): Promise<string[]> {
 	const entries = await readdir(dir, { withFileTypes: true });
 	return entries
-		.filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+		.filter(
+			(e) =>
+				e.isDirectory() &&
+				!e.name.startsWith('.') &&
+				e.name !== ASSETS_DIR,
+		)
 		.map((e) => e.name)
 		.sort();
 }
@@ -217,4 +225,49 @@ export function formatForest(trees: TreeNode[]): string {
 	}
 	walk(trees, []);
 	return lines.join('\n');
+}
+
+/**
+ * Build the minimal covering forest for a set of target paths:
+ * ancestors of each target + the target + all descendants of each target.
+ * Sibling branches outside the cover are dropped.
+ */
+export function coveringSubtree(
+	trees: TreeNode[],
+	targetPaths: string[],
+): TreeNode[] {
+	const include = new Set<string>();
+
+	function addAncestors(path: string): void {
+		const parts = path.split('/').filter(Boolean);
+		for (let i = 1; i < parts.length; i++) {
+			include.add(parts.slice(0, i).join('/'));
+		}
+	}
+
+	function addSubtree(node: TreeNode): void {
+		include.add(node.path);
+		for (const child of node.children) {
+			addSubtree(child);
+		}
+	}
+
+	for (const targetPath of targetPaths) {
+		const normalized = toPosix(targetPath).replace(/\/+$/, '');
+		const node = findNode(trees, normalized);
+		if (!node) continue;
+		addAncestors(normalized);
+		addSubtree(node);
+	}
+
+	function filter(nodes: TreeNode[]): TreeNode[] {
+		return nodes
+			.filter((n) => include.has(n.path))
+			.map((n) => ({
+				...n,
+				children: filter(n.children),
+			}));
+	}
+
+	return filter(trees);
 }
