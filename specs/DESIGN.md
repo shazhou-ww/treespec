@@ -87,10 +87,10 @@ type TestCase = {
   description: string;         // 用例描述
   env: string[];               // 所需环境变量（缺失则跳过并报告）
   steps: Step[];               // 主步骤（在 pre-condition 容器内执行）
-  probes: Probe[];             // 0~N 个状态探针（在 post-condition 容器内执行）
+  postcon: PostCondition[];    // 0~N 个后置条件（在 post-condition 容器内执行）
 }
 
-type Probe = {
+type PostCondition = {
   name: string;
   steps: Step[];
 }
@@ -124,14 +124,14 @@ TestCase 执行后，如果通过，产出一个新的 image tag：
 S_post = docker commit(S_pre_container)
 ```
 
-### 3.2 步骤与探针
+### 3.2 步骤与后置条件
 
-TestCase 的 `steps` 和 Probe 的 `steps` **结构完全对称**——
+TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 都是 Step 数组，每个 step 有 command/request + optional assert。
 
 区别仅在于**执行环境**：
 
-| 属性 | steps（主步骤） | probes（探针） |
+| 属性 | steps（主步骤） | postcon（后置条件） |
 |:-----|:---------------|:--------------|
 | 执行容器 | pre-condition tag 启动的容器 | post-condition tag 启动的独立容器 |
 | 执行时机 | 状态变换前 | 状态变换后（commit 后） |
@@ -140,9 +140,9 @@ TestCase 的 `steps` 和 Probe 的 `steps` **结构完全对称**——
 
 每个 step 的 `assert` 是可选的——中间步骤可以只关心执行成功，不做断言。
 
-### 3.3 探针容器
+### 3.3 后置条件容器
 
-探针跑在从 committed tag 启动的**独立容器**里：
+后置条件跑在从 committed tag 启动的**独立容器**里：
 
 | 属性 | 说明 |
 |:-----|:-----|
@@ -151,7 +151,7 @@ TestCase 的 `steps` 和 Probe 的 `steps` **结构完全对称**——
 | 能力 | 可执行任意命令（包括 mutable） |
 | 数量 | 0~N 个，串行执行（省内存） |
 
-探针容器串行执行，峰值内存 = 1 个 mutator 容器 + 1 个探针容器。
+后置条件容器串行执行，峰值内存 = 1 个 mutator 容器 + 1 个 postcon 容器。
 
 ---
 
@@ -179,12 +179,12 @@ S₀ (base image tag)
 
 ### 4.2 失败剪枝
 
-TestCase 的**任何判定失败**（step assert 或 probe assert），都会导致**子树剪枝**：
+TestCase 的**任何判定失败**（step assert 或 postcon assert），都会导致**子树剪枝**：
 
 | 失败类型 | 原因 | 结果 |
 |:---------|:-----|:-----|
 | **Step assert 失败** | 命令执行结果不符合预期 | 剪枝 |
-| **Probe assert 失败** | 状态验证不符合预期，子节点的 pre-condition 不保证成立 | 剪枝 |
+| **Postcon assert 失败** | 状态验证不符合预期，子节点的 pre-condition 不保证成立 | 剪枝 |
 
 剪枝语义：失败节点的**整个子树不可达**。
 
@@ -241,7 +241,7 @@ execute(node, parent_tag):
   for env_var in node.env:
     if !is_set(env_var):
       report SKIP (missing env: env_var)
-      return
+      return    # 级联剪枝：子节点标记为 SKIPPED (parent skipped)
 
   # 步骤 2: 从 pre-condition tag 启动容器
   container = docker run parent_tag
@@ -252,27 +252,27 @@ execute(node, parent_tag):
     if step.assert && !evaluate(step.assert, output):
       report FAIL
       docker rm container
-      return    # 剪枝：跳过 probes 和子节点
+      return    # 剪枝：跳过 postcon 和子节点
 
   # 步骤 4: 是否需要 commit？
-  need_commit = node.has_children OR node.has_probes
+  need_commit = node.has_children OR node.has_postcon
 
   if need_commit:
     new_tag = docker commit container   # 产生 post-condition tag
 
-  # 步骤 5: 从新 tag 启动探针容器，执行 probes
-  if node.has_probes:
-    probe_container = docker run new_tag
-    for probe in node.probes:
-      for step in probe.steps:
-        output = exec_or_http(probe_container, step, step.timeout)
+  # 步骤 5: 从新 tag 启动后置条件容器，执行 postcon
+  if node.has_postcon:
+    postcon_container = docker run new_tag
+    for postcon in node.postcon:
+      for step in postcon.steps:
+        output = exec_or_http(postcon_container, step, step.timeout)
         if step.assert && !evaluate(step.assert, output):
-          report FAIL (probe: probe.name)
-          docker rm probe_container
+          report FAIL (postcon: postcon.name)
+          docker rm postcon_container
           docker rmi new_tag
           docker rm container
-          return    # 剪枝：probe 失败也剪枝
-    docker rm probe_container
+          return    # 剪枝：postcon 失败也剪枝
+    docker rm postcon_container
 
   # 步骤 6: 继续执行子节点
   if node.has_children:
@@ -290,15 +290,15 @@ execute(node, parent_tag):
 | 条件 | 是否 commit | 原因 |
 |:-----|:------------|:-----|
 | 有子节点 | ✅ | 子节点需要从 post-condition tag 启动 |
-| 有探针 | ✅ | 探针需要从 post-condition tag 启动独立容器 |
-| 叶子节点 + 无探针 | ❌ | 不需要保留状态，直接执行+判定即可 |
+| 有后置条件 | ✅ | 后置条件需要从 post-condition tag 启动独立容器 |
+| 叶子节点 + 无后置条件 | ❌ | 不需要保留状态，直接执行+判定即可 |
 
 ### 5.4 资源消耗
 
 | 资源 | 消耗 | 原因 |
 |:-----|:-----|:-----|
 | **磁盘** | O(路径深度) | 只保留当前 DFS 路径上的 tag，已完成的 tag 立即删除 |
-| **内存** | 1 mutator + 1 probe | 探针串行执行，峰值两个容器 |
+| **内存** | 1 mutator + 1 postcon | 后置条件串行执行，峰值两个容器 |
 | **Docker 层数** | base 层数 + 路径深度 | `docker commit` 每次只增加 **1 层**（overlay2 增量层），不会增加多层 |
 | **时间** | ~5-10 秒/case | 容器启动 + 命令执行 + commit，43 个 case ≈ 5-7 分钟 |
 
@@ -354,6 +354,11 @@ include:
 
 env_file: tests/.env            # 可选，默认同目录 .env，CLI 可覆盖
 
+llm:                            # 可选，仅在使用 llm assertion 时需要
+  base_url: "https://api.openai.com/v1"
+  model: "gpt-4o"
+  api_key_env: "OPENAI_API_KEY"
+
 output: .treespec-output         # 可选
 ```
 
@@ -365,6 +370,9 @@ output: .treespec-output         # 可选
 | `image.args` | ❌ | Docker build args，key-value map |
 | `include` | ✅ | Test case 文件的 glob patterns |
 | `env_file` | ❌ | 环境变量文件路径（默认 = treespec.yaml 同目录 `.env`） |
+| `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
+| `llm.model` | ❌ | LLM 模型名 |
+| `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |
 | `output` | ❌ | 测试输出目录（默认 `.treespec-output`） |
 
 **Docker build context** = treespec.yaml 所在目录（不可配置）。
@@ -419,7 +427,7 @@ steps:
     assert:
       type: jsonata
       expression: "$count(providers[name='openrouter']) = 1"
-probes:
+postcon:
   - name: verify-provider-persisted
     steps:
       - type: exec
@@ -443,7 +451,7 @@ steps:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-probes:
+postcon:
   - name: verify-model-listed
     steps:
       - type: exec
@@ -488,6 +496,51 @@ Step 的 command 和 HTTP request 中可以引用环境变量，
 - `exit_code` — 退出码
 - `status` — HTTP 响应状态码
 - `body` — HTTP 响应体
+
+### 8.4 LLM Assertion
+
+LLM assertion 使用 OpenAI 兼容 API（`/chat/completions`），配置方式：
+
+```yaml
+# treespec.yaml
+llm:
+  base_url: "https://api.openai.com/v1"    # 或任何 OpenAI 兼容端点
+  model: "gpt-4o"
+  api_key_env: "OPENAI_API_KEY"            # 从环境变量读取 key，不硬编码
+```
+
+CLI 也可覆盖：
+
+```bash
+treespec run --llm-base-url https://api.openai.com/v1 --llm-model gpt-4o
+```
+
+**判定流程**：
+
+1. 组装对话：system prompt（judge 角色定义）+ user messages（test case 上下文 + 步骤历史 + 当前步骤输出）
+2. 发送到 LLM API（temperature=0, max_tokens=256）
+3. 解析响应：正则提取 `VERDICT: PASS` 或 `VERDICT: FAIL` + `REASON: ...`
+4. 返回判定结果
+
+**System prompt** 定义 judge 角色和输出格式：
+
+```
+You are a test judge. You are given a test case's steps and their results.
+Your job: determine if the output meets the expected criteria.
+
+Reply in this exact format:
+VERDICT: PASS
+REASON: <one sentence explanation>
+
+Or:
+VERDICT: FAIL
+REASON: <one sentence explanation of what went wrong>
+
+Be strict but fair. Only PASS when the output clearly meets the criteria.
+```
+
+**上下文组装**：当前步骤之前的所有步骤（命令 + 输出 + 判定结果）作为对话历史喂给 LLM，
+使其能理解完整的测试上下文，而不只是孤立的一步。
 
 ---
 
