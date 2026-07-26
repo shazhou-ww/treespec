@@ -1,0 +1,10 @@
+description: "treespec CLI with no args should show help"
+steps:
+  - type: exec
+    command: "treespec 2>&1 || true"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Usage" }
+        - { path: "stdout", regex: "validate" }
+        - { path: "stdout", regex: "run" }

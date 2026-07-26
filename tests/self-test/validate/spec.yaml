@@ -1,0 +1,9 @@
+description: "treespec validate on the project's own test tree should pass"
+steps:
+  - type: exec
+    command: "treespec validate --config /app/treespec.yaml"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+        - { path: "stdout", regex: "Valid" }

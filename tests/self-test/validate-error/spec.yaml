@@ -1,0 +1,8 @@
+description: "treespec validate with non-existent config should fail gracefully"
+steps:
+  - type: exec
+    command: "treespec validate --config /nonexistent/treespec.yaml 2>&1; [ $? -ne 0 ]"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
