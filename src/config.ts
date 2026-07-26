@@ -46,6 +46,12 @@ export interface TreespecConfig {
 	/** Base image build configuration. Required. */
 	image: ImageConfig;
 	/**
+	 * Root directory of the test tree, relative to treespec.yaml.
+	 * treespec recursively scans for directories containing spec.yaml.
+	 * The directory hierarchy = test tree structure.
+	 */
+	specs: string;
+	/**
 	 * LLM configuration for 'llm' assertion type.
 	 * Required only if any test case uses `assert: { type: 'llm' }`.
 	 */
@@ -59,10 +65,6 @@ export interface TreespecConfig {
 
 // ─── Conventions (not configurable) ─────────────────────────────
 
-// Test tree root: `tests/` directory next to treespec.yaml.
-// treespec recursively scans for directories containing spec.yaml.
-// Use `treespec run --tests-dir <path>` to override at runtime.
-//
 // .env is always read from treespec.yaml's directory.
 // Use `treespec run --env-file <path>` to override at runtime.
 //

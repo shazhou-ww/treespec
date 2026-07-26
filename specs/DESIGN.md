@@ -370,6 +370,8 @@ image:
   args:                           # 可选
     NODE_VERSION: "22"
 
+specs: tests                      # 测试树根目录（递归扫描 spec.yaml），相对于 treespec.yaml
+
 llm:                              # 可选，仅在使用 llm assertion 时需要
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
@@ -385,15 +387,13 @@ output: .treespec-output          # 可选
 | `image.dockerfile` | ✅ | Dockerfile 路径（相对于 treespec.yaml） |
 | `image.tag` | ✅ | Base image tag。已存在则跳过 build，`--rebuild` 强制重建 |
 | `image.args` | ❌ | Docker build args，key-value map |
+| `specs` | ✅ | 测试树根目录（相对于 treespec.yaml），递归扫描含 `spec.yaml` 的子目录 |
 | `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
 | `llm.model` | ❌ | LLM 模型名 |
 | `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |
 | `output` | ❌ | 测试输出目录（默认 `.treespec-output`） |
 
-**约定（无需配置）：**
-- 测试树根目录：treespec.yaml 同目录下的 `tests/`，递归扫描含 `spec.yaml` 的子目录
-- CLI `--tests-dir <path>` 可覆盖
-- `.env` 文件约定放在 treespec.yaml 同目录，CLI `--env-file` 可覆盖
+**约定：** `.env` 文件放在 treespec.yaml 同目录，CLI `--env-file` 可覆盖。
 
 **Docker build context** = treespec.yaml 所在目录（不可配置）。
 
