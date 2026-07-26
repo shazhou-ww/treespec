@@ -401,9 +401,11 @@ export async function runRun(args: string[]): Promise<number> {
 			onStep: ({ depth, index, stepSummary, stepResult, verdict, reason, context, postconName }) => {
 				const pad = '  '.repeat(depth + 1);
 				const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-				const exit = `${DIM}exit ${stepResult.exit_code}${RESET}`;
+				const detail = 'exit_code' in stepResult
+					? `${DIM}exit ${stepResult.exit_code}${RESET}`
+					: `${DIM}status ${stepResult.status}${RESET}`;
 				const prefix = context === 'postcon' ? `postcon ${postconName} ` : '';
-				console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${exit}`);
+				console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${detail}`);
 				if (verdict === 'FAIL') {
 					console.log(`${pad}  ${RED}${reason}${RESET}`);
 				}

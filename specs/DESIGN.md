@@ -431,7 +431,7 @@ output: .treespec-output          # 可选
 
 | 字段 | 必填 | 说明 |
 |:-----|:-----|:-----|
-| `image.dockerfile` | ✅ | Dockerfile 路径（相对于 treespec.yaml） |
+| `image.dockerfile` | ❌ | Dockerfile 路径（相对于 treespec.yaml）。可省略，改用 `--image` 传入已有 image |
 | `image.tag` | ✅ | Base image tag。已存在则跳过 build，`--rebuild` 强制重建 |
 | `image.args` | ❌ | Docker build args，key-value map |
 | `specs` | ✅ | 测试树根目录（相对于 treespec.yaml），递归扫描含 `spec.yaml` 的子目录 |
@@ -448,11 +448,14 @@ output: .treespec-output          # 可选
 
 ```bash
 treespec run                                # 跑完整测试树
+treespec run --image myapp:latest           # 用已有 image，不 build
 treespec run tests/provider-add/model-add/  # 跑子树（自动含祖先链）
 treespec run tests/*/*/                     # glob 多个子树
 treespec run --rebuild                      # 强制重建 base image
 treespec run --env-file x.env               # 覆盖 .env
 ```
+
+**image 来源优先级**：`--image` > `image.dockerfile`。两者都没有则报错。
 
 ### 7.4 Base Image 构建
 

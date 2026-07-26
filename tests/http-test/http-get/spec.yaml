@@ -1,0 +1,11 @@
+description: "HTTP GET against httpbingo — regex on body"
+steps:
+  - type: http
+    request:
+      method: GET
+      url: "https://httpbingo.org/get"
+    assert:
+      type: regex
+      conditions:
+        - { path: "status", regex: "^200$" }
+        - { path: "body", regex: "httpbingo" }

@@ -13,7 +13,11 @@ import {
 	removeContainer,
 } from './executor.js';
 import type { TreeNode } from './scanner.js';
-import { executeStep, type StepResult } from './steps.js';
+import {
+	executeStep,
+	parseDuration,
+	type StepResult,
+} from './steps.js';
 import type { Assertion, Step } from './types.js';
 
 export interface NodeResult {
@@ -89,6 +93,101 @@ function cascadeSkip(
 	}
 }
 
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function stepSummaryOf(step: Step): string {
+	if (step.type === 'exec') return step.command;
+	return `${step.request.method.toUpperCase()} ${step.request.url}`;
+}
+
+/**
+ * Execute one step (possibly with wait polling) and evaluate its assertion.
+ * Wait only applies when the step has an assert and that assert fails.
+ */
+async function executeStepWithAssert(
+	step: Step,
+	containerId: string,
+	env: Record<string, string>,
+): Promise<{
+	stepResult: StepResult;
+	verdict: 'PASS' | 'FAIL';
+	reason: string;
+	timedOut: boolean;
+}> {
+	const waitTimeoutMs = step.wait ? parseDuration(step.wait.timeout) : 0;
+	const delayMs = step.wait ? parseDuration(step.wait.delay ?? '5s') : 0;
+	const started = Date.now();
+	let attempts = 0;
+
+	for (;;) {
+		attempts++;
+		const stepResult = await executeStep(step, containerId, env);
+
+		if (stepResult.timedOut) {
+			return {
+				stepResult,
+				verdict: 'FAIL',
+				reason: 'step timed out',
+				timedOut: true,
+			};
+		}
+
+		// Transition steps: immediate pass/fail — wait does nothing
+		if (step.assert === undefined) {
+			const judge = await evaluateAssertion(undefined, stepResult);
+			return {
+				stepResult,
+				verdict: judge.verdict,
+				reason: judge.reason,
+				timedOut: false,
+			};
+		}
+
+		const judge = await evaluateAssertion(step.assert as Assertion, stepResult);
+		if (judge.verdict === 'PASS') {
+			return {
+				stepResult,
+				verdict: 'PASS',
+				reason: judge.reason,
+				timedOut: false,
+			};
+		}
+
+		// No wait configured → fail immediately
+		if (!step.wait) {
+			return {
+				stepResult,
+				verdict: 'FAIL',
+				reason: judge.reason,
+				timedOut: false,
+			};
+		}
+
+		const elapsed = Date.now() - started;
+		if (elapsed >= waitTimeoutMs) {
+			return {
+				stepResult,
+				verdict: 'FAIL',
+				reason: `wait timeout exceeded after ${attempts} attempts`,
+				timedOut: false,
+			};
+		}
+
+		await sleep(delayMs);
+
+		if (Date.now() - started >= waitTimeoutMs) {
+			return {
+				stepResult,
+				verdict: 'FAIL',
+				reason: `wait timeout exceeded after ${attempts} attempts`,
+				timedOut: false,
+			};
+		}
+	}
+}
+
 async function runSteps(
 	steps: Step[],
 	containerId: string,
@@ -103,12 +202,11 @@ async function runSteps(
 
 	for (let i = 0; i < steps.length; i++) {
 		const step = steps[i]!;
-		const stepResult = await executeStep(step, containerId, env);
-		stepResults.push(stepResult);
+		const stepSummary = stepSummaryOf(step);
+		const outcome = await executeStepWithAssert(step, containerId, env);
+		stepResults.push(outcome.stepResult);
 
-		const stepSummary = step.type === 'exec' ? step.command : 'http';
-
-		if (stepResult.timedOut) {
+		if (outcome.timedOut) {
 			const reason = context === 'postcon'
 				? `postcon ${postconName}: step ${i + 1} timed out`
 				: `step ${i + 1} timed out`;
@@ -117,7 +215,7 @@ async function runSteps(
 				depth,
 				index: i,
 				stepSummary,
-				stepResult,
+				stepResult: outcome.stepResult,
 				verdict: 'FAIL',
 				reason,
 				context,
@@ -126,23 +224,22 @@ async function runSteps(
 			return { ok: false, reason, stepResults };
 		}
 
-		const judge = await evaluateAssertion(step.assert as Assertion | undefined, stepResult);
 		config.onStep?.({
 			node,
 			depth,
 			index: i,
 			stepSummary,
-			stepResult,
-			verdict: judge.verdict,
-			reason: judge.reason,
+			stepResult: outcome.stepResult,
+			verdict: outcome.verdict,
+			reason: outcome.reason,
 			context,
 			postconName,
 		});
 
-		if (judge.verdict === 'FAIL') {
+		if (outcome.verdict === 'FAIL') {
 			const reason = context === 'postcon'
-				? `postcon ${postconName}: step ${i + 1} failed: ${judge.reason}`
-				: `step ${i + 1} failed: ${judge.reason}`;
+				? `postcon ${postconName}: step ${i + 1} failed: ${outcome.reason}`
+				: `step ${i + 1} failed: ${outcome.reason}`;
 			return { ok: false, reason, stepResults };
 		}
 	}
@@ -200,17 +297,26 @@ export async function runTree(
 	let committed = false;
 	const stepResults: StepResult[] = [];
 
+	const needsContainer =
+		spec.steps.some((s) => s.type === 'exec') ||
+		(spec.postcon?.some((p) => p.steps.some((s) => s.type === 'exec')) ?? false) ||
+		node.children.length > 0 ||
+		(spec.postcon?.length ?? 0) > 0;
+
 	try {
-		containerId = await createAndStartContainer(parentTag, {
-			env,
-			specsDir: config.specsDir,
-			workdir: node.path,
-		});
+		if (needsContainer) {
+			containerId = await createAndStartContainer(parentTag, {
+				env,
+				specsDir: config.specsDir,
+				workdir: node.path,
+			});
+		}
 
 		// ── Steps ────────────────────────────────────────────────────
+		// HTTP-only cases may have no container; executeStep ignores containerId for http.
 		const stepsOutcome = await runSteps(
 			spec.steps,
-			containerId,
+			containerId ?? '',
 			env,
 			node,
 			depth,
@@ -237,7 +343,7 @@ export async function runTree(
 		const needCommit = hasChildren || hasPostcon;
 
 		// ── Commit ───────────────────────────────────────────────────
-		if (needCommit) {
+		if (needCommit && containerId) {
 			ephemeralTag = ephemeralTagForPath(node.path);
 			await commitContainer(containerId, ephemeralTag);
 			committed = true;

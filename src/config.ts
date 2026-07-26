@@ -7,9 +7,10 @@
 export interface ImageConfig {
 	/**
 	 * Dockerfile path, relative to treespec.yaml.
-	 * The Dockerfile builds the base image (S₀) for the test tree.
+	 * Used to build the base image (S₀) for the test tree.
+	 * Optional: can be omitted if --image flag is used instead.
 	 */
-	dockerfile: string;
+	dockerfile?: string;
 	/**
 	 * Base image tag. treespec checks if this tag already exists:
 	 *   - exists + no --rebuild → skip build, use existing tag
@@ -21,6 +22,11 @@ export interface ImageConfig {
 	/** Optional Docker build args. */
 	args?: Record<string, string>;
 }
+
+// Image resolution priority:
+//   1. CLI --image <tag>  → use directly, no build
+//   2. image.dockerfile    → build from Dockerfile
+//   3. Neither              → error
 
 // ─── LLM Config ─────────────────────────────────────────────────
 

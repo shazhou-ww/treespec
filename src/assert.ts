@@ -1,9 +1,9 @@
 /**
- * treespec — Assertion evaluation (regex + jsonata in Phase 3)
+ * treespec — Assertion evaluation (regex + jsonata; llm later)
  */
 
 import jsonata from 'jsonata';
-import type { StepResult } from './steps.js';
+import { isHttpStepResult, type StepResult } from './steps.js';
 import type { Assertion } from './types.js';
 
 export interface JudgeResult {
@@ -36,40 +36,71 @@ function normalizeResult(result: StepResult | Record<string, unknown>): Record<s
 	if ('exitCode' in raw && !('exit_code' in raw)) {
 		raw.exit_code = raw.exitCode;
 	}
+	// Normalize header lookup: headers.Foo → headers.foo
+	if (
+		raw.headers !== null &&
+		typeof raw.headers === 'object' &&
+		!Array.isArray(raw.headers)
+	) {
+		const normalized: Record<string, string> = {};
+		for (const [key, value] of Object.entries(raw.headers as Record<string, unknown>)) {
+			normalized[key.toLowerCase()] = String(value);
+		}
+		raw.headers = normalized;
+	}
 	return raw;
 }
 
 /**
  * Build the object JSONata evaluates against.
- * If stdout is a JSON object, its fields are merged so expressions like `a = 1` work.
+ * If stdout/body is a JSON object, its fields are merged so expressions like `a = 1` work.
  */
 function jsonataInput(data: Record<string, unknown>): Record<string, unknown> {
-	const stdout = data.stdout;
-	if (typeof stdout !== 'string') return data;
-	const trimmed = stdout.trim();
-	if (!trimmed) return data;
-	try {
-		const parsed: unknown = JSON.parse(trimmed);
-		if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-			return { ...(parsed as Record<string, unknown>), ...data };
+	let result = data;
+
+	for (const field of ['stdout', 'body'] as const) {
+		const value = result[field];
+		if (typeof value !== 'string') continue;
+		const trimmed = value.trim();
+		if (!trimmed) continue;
+		try {
+			const parsed: unknown = JSON.parse(trimmed);
+			if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+				result = { ...(parsed as Record<string, unknown>), ...result };
+			}
+		} catch {
+			// field is not JSON — keep raw result object
 		}
-	} catch {
-		// stdout is not JSON — evaluate against the raw result object
 	}
-	return data;
+
+	return result;
+}
+
+function isHttpLike(data: Record<string, unknown>): boolean {
+	return 'status' in data && !('exit_code' in data);
 }
 
 /**
  * Evaluate an assertion against a step result object.
- * If `assertion` is undefined, treat as transition: exit_code 0 = PASS.
+ * If `assertion` is undefined:
+ *   - exec transition: exit_code 0 = PASS
+ *   - http transition: HTTP 2xx = PASS
  */
 export async function evaluateAssertion(
 	assertion: Assertion | undefined,
 	result: StepResult | Record<string, unknown>,
 ): Promise<JudgeResult> {
 	const data = normalizeResult(result);
+	const httpLike = isHttpStepResult(result as StepResult) || isHttpLike(data);
 
 	if (assertion === undefined) {
+		if (httpLike) {
+			const status = Number(data.status ?? 0);
+			if (status >= 200 && status < 300) {
+				return { verdict: 'PASS', reason: `transition step: HTTP ${status}` };
+			}
+			return { verdict: 'FAIL', reason: `transition step: HTTP ${status}` };
+		}
 		const code = Number(data.exit_code ?? 1);
 		if (code === 0) {
 			return { verdict: 'PASS', reason: 'transition step: exit code 0' };
@@ -84,7 +115,13 @@ export async function evaluateAssertion(
 	if (assertion.type === 'regex') {
 		const failures: string[] = [];
 		for (const condition of assertion.conditions) {
-			const value = resolvePath(data, condition.path);
+			let path = condition.path;
+			// headers.<Name> — match case-insensitively via normalized headers
+			if (path.toLowerCase().startsWith('headers.')) {
+				const name = path.slice('headers.'.length).toLowerCase();
+				path = `headers.${name}`;
+			}
+			const value = resolvePath(data, path);
 			const text = toMatchString(value);
 			let re: RegExp;
 			try {
