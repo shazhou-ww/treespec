@@ -158,6 +158,32 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 
 后置条件容器串行执行，峰值内存 = 1 个 mutator 容器 + 1 个 postcon 容器。
 
+### 3.4 容器文件访问
+
+所有容器（mutator、postcon）在创建时挂载 **specs 目录为只读卷**：
+
+```
+-v <specs_dir>:/specs:ro --workdir /specs/<case-path>
+```
+
+- spec 文件 + assets 全程可读，无需逐容器复制
+- 每个 step 的 command 在自己的 case 目录（WORKDIR）内执行
+- `assets/` 是保留目录名，scanner 跳过它不当子节点
+- `docker commit` 不影响 mount（ro mount 不进 image layer，状态变更在容器可写层）
+
+**目录示例：**
+```
+tests/
+  provider-add/
+    spec.yaml
+    assets/                    # 保留目录名，scanner 跳过
+      config.json
+    model-add/
+      spec.yaml
+```
+
+容器内访问：`cat assets/config.json` 直接可读。
+
 ---
 
 ## 4 测试树
