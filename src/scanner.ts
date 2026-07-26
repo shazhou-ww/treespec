@@ -217,8 +217,11 @@ export function formatForest(trees: TreeNode[]): string {
 				lines.push(`${indent}${branch}${node.name} [org]`);
 			} else {
 				const env = node.spec.env?.length ? ` [env: ${node.spec.env.join(', ')}]` : '';
+				const postcon = node.spec.postcon?.length
+					? node.spec.postcon.map((p) => ` [postcon: ${p.name}]`).join('')
+					: '';
 				const desc = node.spec.description ? ` — ${node.spec.description}` : '';
-				lines.push(`${indent}${branch}${node.name}${desc}${env}`);
+				lines.push(`${indent}${branch}${node.name}${desc}${env}${postcon}`);
 			}
 			walk(node.children, [...isLastList, isLast]);
 		});

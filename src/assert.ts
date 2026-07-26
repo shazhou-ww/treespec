@@ -1,14 +1,31 @@
 /**
- * treespec — Assertion evaluation (regex + jsonata; llm later)
+ * treespec — Assertion evaluation (regex + jsonata + llm)
  */
 
 import jsonata from 'jsonata';
+import type { LlmConfig } from './config.js';
+import {
+	assembleJudgeMessages,
+	callLlmApi,
+	parseJudgeResponse,
+} from './llm.js';
 import { isHttpStepResult, type StepResult } from './steps.js';
-import type { Assertion } from './types.js';
+import type { Assertion, Spec, Step } from './types.js';
 
 export interface JudgeResult {
 	verdict: 'PASS' | 'FAIL';
 	reason: string;
+}
+
+/** Extra context required for LLM assertions. */
+export interface AssertContext {
+	spec: Spec;
+	/** Steps being judged (spec.steps or a postcon's steps). */
+	steps: Step[];
+	/** Step results including the current step at `currentIndex`. */
+	stepResults: StepResult[];
+	currentIndex: number;
+	llmConfig?: LlmConfig;
 }
 
 function resolvePath(result: Record<string, unknown>, path: string): unknown {
@@ -85,10 +102,12 @@ function isHttpLike(data: Record<string, unknown>): boolean {
  * If `assertion` is undefined:
  *   - exec transition: exit_code 0 = PASS
  *   - http transition: HTTP 2xx = PASS
+ * `ctx` is required when `assertion.type === 'llm'`.
  */
 export async function evaluateAssertion(
 	assertion: Assertion | undefined,
 	result: StepResult | Record<string, unknown>,
+	ctx?: AssertContext,
 ): Promise<JudgeResult> {
 	const data = normalizeResult(result);
 	const httpLike = isHttpStepResult(result as StepResult) || isHttpLike(data);
@@ -109,7 +128,22 @@ export async function evaluateAssertion(
 	}
 
 	if (assertion.type === 'llm') {
-		throw new Error('LLM assertion not yet supported');
+		if (!ctx?.llmConfig) {
+			throw new Error('LLM assertion requires llm config in treespec.yaml');
+		}
+		try {
+			const messages = assembleJudgeMessages(
+				ctx.spec,
+				ctx.stepResults,
+				ctx.currentIndex,
+				ctx.steps,
+			);
+			const response = await callLlmApi(messages, ctx.llmConfig);
+			return parseJudgeResponse(response);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			return { verdict: 'FAIL', reason: message };
+		}
 	}
 
 	if (assertion.type === 'regex') {

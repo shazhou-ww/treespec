@@ -2,7 +2,8 @@
  * treespec — Tree DFS runner (commit + postcon + failure pruning)
  */
 
-import { evaluateAssertion } from './assert.js';
+import type { LlmConfig } from './config.js';
+import { evaluateAssertion, type AssertContext } from './assert.js';
 import {
 	commitContainer,
 	ephemeralTagForPath,
@@ -12,13 +13,15 @@ import {
 	createAndStartContainer,
 	removeContainer,
 } from './executor.js';
-import type { TreeNode } from './scanner.js';
+import { countNodes, type TreeNode } from './scanner.js';
 import {
 	executeStep,
+	isExecStepResult,
 	parseDuration,
 	type StepResult,
 } from './steps.js';
-import type { Assertion, Step } from './types.js';
+import type { TraceWriter } from './trace.js';
+import type { Assertion, Spec, Step } from './types.js';
 
 export interface NodeResult {
 	status: 'PASS' | 'FAIL' | 'SKIP';
@@ -31,6 +34,14 @@ export interface RunConfig {
 	output?: string;
 	/** Absolute path to the specs root (mounted read-only at /specs). */
 	specsDir: string;
+	/** When false, skip JSONL trace writes. Default true when trace is set. */
+	writeTrace?: boolean;
+	/** Trace writer (created by CLI). */
+	trace?: TraceWriter;
+	/** LLM config for llm assertions (optional). */
+	llm?: LlmConfig;
+	/** Base image tag (written into trace meta). */
+	baseImage?: string;
 	onNode?: (info: {
 		node: TreeNode;
 		result: NodeResult;
@@ -46,6 +57,7 @@ export interface RunConfig {
 		reason: string;
 		context: 'step' | 'postcon';
 		postconName?: string;
+		duration_ms: number;
 	}) => void;
 }
 
@@ -55,6 +67,16 @@ export interface RunSummary {
 	failed: number;
 	skipped: number;
 	results: Array<{ node: TreeNode; result: NodeResult; depth: number }>;
+	duration_ms?: number;
+}
+
+function stepsUseLlm(steps: Step[]): boolean {
+	return steps.some((s) => s.assert?.type === 'llm');
+}
+
+function specUsesLlm(spec: Spec): boolean {
+	if (stepsUseLlm(spec.steps)) return true;
+	return spec.postcon?.some((p) => stepsUseLlm(p.steps)) ?? false;
 }
 
 function record(
@@ -102,6 +124,51 @@ function stepSummaryOf(step: Step): string {
 	return `${step.request.method.toUpperCase()} ${step.request.url}`;
 }
 
+function stepFieldsForTrace(stepResult: StepResult): {
+	stdout: string;
+	stderr: string;
+	exit_code: number;
+} {
+	if (isExecStepResult(stepResult)) {
+		return {
+			stdout: stepResult.stdout,
+			stderr: stepResult.stderr,
+			exit_code: stepResult.exit_code,
+		};
+	}
+	return {
+		stdout: stepResult.body,
+		stderr: '',
+		exit_code: stepResult.status,
+	};
+}
+
+async function emitStepTrace(
+	config: RunConfig,
+	node: TreeNode,
+	index: number,
+	command: string,
+	stepResult: StepResult,
+	verdict: 'PASS' | 'FAIL',
+	reason: string,
+	duration_ms: number,
+): Promise<void> {
+	if (config.writeTrace === false || !config.trace) return;
+	const fields = stepFieldsForTrace(stepResult);
+	await config.trace.writeStep({
+		index,
+		step_index: index,
+		node_path: node.path,
+		command,
+		stdout: fields.stdout,
+		stderr: fields.stderr,
+		exit_code: fields.exit_code,
+		verdict,
+		reason,
+		duration_ms,
+	});
+}
+
 /**
  * Execute one step (possibly with wait polling) and evaluate its assertion.
  * Wait only applies when the step has an assert and that assert fails.
@@ -110,11 +177,13 @@ async function executeStepWithAssert(
 	step: Step,
 	containerId: string,
 	env: Record<string, string>,
+	assertCtx: Omit<AssertContext, 'stepResults'> & { stepResults: StepResult[] },
 ): Promise<{
 	stepResult: StepResult;
 	verdict: 'PASS' | 'FAIL';
 	reason: string;
 	timedOut: boolean;
+	duration_ms: number;
 }> {
 	const waitTimeoutMs = step.wait ? parseDuration(step.wait.timeout) : 0;
 	const delayMs = step.wait ? parseDuration(step.wait.delay ?? '5s') : 0;
@@ -131,27 +200,35 @@ async function executeStepWithAssert(
 				verdict: 'FAIL',
 				reason: 'step timed out',
 				timedOut: true,
+				duration_ms: Date.now() - started,
 			};
 		}
 
+		const ctx: AssertContext = {
+			...assertCtx,
+			stepResults: [...assertCtx.stepResults, stepResult],
+		};
+
 		// Transition steps: immediate pass/fail — wait does nothing
 		if (step.assert === undefined) {
-			const judge = await evaluateAssertion(undefined, stepResult);
+			const judge = await evaluateAssertion(undefined, stepResult, ctx);
 			return {
 				stepResult,
 				verdict: judge.verdict,
 				reason: judge.reason,
 				timedOut: false,
+				duration_ms: Date.now() - started,
 			};
 		}
 
-		const judge = await evaluateAssertion(step.assert as Assertion, stepResult);
+		const judge = await evaluateAssertion(step.assert as Assertion, stepResult, ctx);
 		if (judge.verdict === 'PASS') {
 			return {
 				stepResult,
 				verdict: 'PASS',
 				reason: judge.reason,
 				timedOut: false,
+				duration_ms: Date.now() - started,
 			};
 		}
 
@@ -162,6 +239,7 @@ async function executeStepWithAssert(
 				verdict: 'FAIL',
 				reason: judge.reason,
 				timedOut: false,
+				duration_ms: Date.now() - started,
 			};
 		}
 
@@ -172,6 +250,7 @@ async function executeStepWithAssert(
 				verdict: 'FAIL',
 				reason: `wait timeout exceeded after ${attempts} attempts`,
 				timedOut: false,
+				duration_ms: Date.now() - started,
 			};
 		}
 
@@ -183,6 +262,7 @@ async function executeStepWithAssert(
 				verdict: 'FAIL',
 				reason: `wait timeout exceeded after ${attempts} attempts`,
 				timedOut: false,
+				duration_ms: Date.now() - started,
 			};
 		}
 	}
@@ -196,6 +276,7 @@ async function runSteps(
 	depth: number,
 	config: RunConfig,
 	context: 'step' | 'postcon',
+	spec: Spec,
 	postconName?: string,
 ): Promise<{ ok: true; stepResults: StepResult[] } | { ok: false; reason: string; stepResults: StepResult[] }> {
 	const stepResults: StepResult[] = [];
@@ -203,26 +284,15 @@ async function runSteps(
 	for (let i = 0; i < steps.length; i++) {
 		const step = steps[i]!;
 		const stepSummary = stepSummaryOf(step);
-		const outcome = await executeStepWithAssert(step, containerId, env);
+		const assertCtx = {
+			spec,
+			steps,
+			stepResults,
+			currentIndex: i,
+			llmConfig: config.llm,
+		};
+		const outcome = await executeStepWithAssert(step, containerId, env, assertCtx);
 		stepResults.push(outcome.stepResult);
-
-		if (outcome.timedOut) {
-			const reason = context === 'postcon'
-				? `postcon ${postconName}: step ${i + 1} timed out`
-				: `step ${i + 1} timed out`;
-			config.onStep?.({
-				node,
-				depth,
-				index: i,
-				stepSummary,
-				stepResult: outcome.stepResult,
-				verdict: 'FAIL',
-				reason,
-				context,
-				postconName,
-			});
-			return { ok: false, reason, stepResults };
-		}
 
 		config.onStep?.({
 			node,
@@ -231,10 +301,33 @@ async function runSteps(
 			stepSummary,
 			stepResult: outcome.stepResult,
 			verdict: outcome.verdict,
-			reason: outcome.reason,
+			reason: outcome.timedOut
+				? (context === 'postcon'
+					? `postcon ${postconName}: step ${i + 1} timed out`
+					: `step ${i + 1} timed out`)
+				: outcome.reason,
 			context,
 			postconName,
+			duration_ms: outcome.duration_ms,
 		});
+
+		await emitStepTrace(
+			config,
+			node,
+			i,
+			stepSummary,
+			outcome.stepResult,
+			outcome.verdict,
+			outcome.reason,
+			outcome.duration_ms,
+		);
+
+		if (outcome.timedOut) {
+			const reason = context === 'postcon'
+				? `postcon ${postconName}: step ${i + 1} timed out`
+				: `step ${i + 1} timed out`;
+			return { ok: false, reason, stepResults };
+		}
 
 		if (outcome.verdict === 'FAIL') {
 			const reason = context === 'postcon'
@@ -292,6 +385,20 @@ export async function runTree(
 		}
 	}
 
+	// ── LLM config check ───────────────────────────────────────────
+	if (specUsesLlm(spec) && !config.llm) {
+		const result: NodeResult = {
+			status: 'SKIP',
+			reason: 'no LLM config',
+			stepResults: [],
+		};
+		record(summary, node, result, depth, config);
+		for (const child of node.children) {
+			cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
+		}
+		return { result, summary };
+	}
+
 	let containerId: string | undefined;
 	let ephemeralTag: string | undefined;
 	let committed = false;
@@ -313,7 +420,6 @@ export async function runTree(
 		}
 
 		// ── Steps ────────────────────────────────────────────────────
-		// HTTP-only cases may have no container; executeStep ignores containerId for http.
 		const stepsOutcome = await runSteps(
 			spec.steps,
 			containerId ?? '',
@@ -322,6 +428,7 @@ export async function runTree(
 			depth,
 			config,
 			'step',
+			spec,
 		);
 		stepResults.push(...stepsOutcome.stepResults);
 
@@ -359,6 +466,10 @@ export async function runTree(
 						specsDir: config.specsDir,
 						workdir: node.path,
 					});
+					const postconSpec: Spec = {
+						description: `${spec.description ?? node.path} / postcon ${postcon.name}`,
+						steps: postcon.steps,
+					};
 					const postconOutcome = await runSteps(
 						postcon.steps,
 						postconId,
@@ -367,6 +478,7 @@ export async function runTree(
 						depth,
 						config,
 						'postcon',
+						postconSpec,
 						postcon.name,
 					);
 					stepResults.push(...postconOutcome.stepResults);
@@ -431,8 +543,32 @@ export async function runForest(
 		skipped: 0,
 		results: [],
 	};
+	const started = Date.now();
+	const totalNodes = countNodes(trees);
+
+	if (config.writeTrace !== false && config.trace) {
+		await config.trace.writeMeta(totalNodes, {
+			name: 'treespec run',
+			base_image: config.baseImage,
+		});
+	}
+
 	for (const root of trees) {
 		await runTree(root, baseTag, env, config, 0, summary);
 	}
+
+	summary.duration_ms = Date.now() - started;
+
+	if (config.writeTrace !== false && config.trace) {
+		await config.trace.writeSummary({
+			total: summary.total,
+			passed: summary.passed,
+			failed: summary.failed,
+			skipped: summary.skipped,
+			duration_ms: summary.duration_ms,
+			ended_at: new Date().toISOString(),
+		});
+	}
+
 	return summary;
 }

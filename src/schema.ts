@@ -91,7 +91,7 @@ export const SpecSchema = z.object({
 // ─── Config ──────────────────────────────────────────────────────
 
 const ImageConfigSchema = z.object({
-	dockerfile: z.string().min(1),
+	dockerfile: z.string().min(1).optional(),
 	tag: z.string().min(1),
 	args: z.record(z.string()).optional(),
 });

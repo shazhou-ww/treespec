@@ -8,3 +8,6 @@ steps:
         - { path: "stdout", regex: "Usage" }
         - { path: "stdout", regex: "validate" }
         - { path: "stdout", regex: "run" }
+        - { path: "stdout", regex: "tree" }
+        - { path: "stdout", regex: "init" }
+        - { path: "stdout", regex: "clean" }

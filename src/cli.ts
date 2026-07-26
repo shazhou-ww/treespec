@@ -2,13 +2,15 @@
  * treespec — CLI commands
  */
 
-import { access } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import type { LlmConfig } from './config.js';
 import {
 	buildImage,
 	cleanEphemeralTags,
 	imageExists,
+	pullImageIfMissing,
 	type BuildProgressEvent,
 } from './docker.js';
 import { loadEnvFile, mergeEnv } from './env.js';
@@ -22,6 +24,8 @@ import {
 	scanSpecs,
 	type TreeNode,
 } from './scanner.js';
+import { isHttpStepResult } from './steps.js';
+import { createTraceWriter } from './trace.js';
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -36,16 +40,23 @@ export function printHelp(): void {
 
 Usage:
   treespec validate [--config <path>]              Validate treespec.yaml and the test tree
-  treespec run [paths...] [--rebuild] [--env-file <path>] [--keep-tags]
-                                                   DFS-execute the test tree (or covering subtrees)
+  treespec run [paths...] [options]                DFS-execute the test tree (or covering subtrees)
+  treespec tree [--config <path>]                  Visualize the test tree structure
+  treespec init <path>                             Create a project scaffold
   treespec clean                                   Remove all treespec/ephemeral:* tags
   treespec help                                    Show this help
 
 Options:
-  --config <path>     Path to treespec.yaml (default: ./treespec.yaml)
-  --rebuild           Force rebuild of the base image even if the tag exists
-  --env-file <path>   Override .env path (default: <config-dir>/.env)
-  --keep-tags         Keep ephemeral image tags after the run (debug)
+  --config <path>        Path to treespec.yaml (default: ./treespec.yaml)
+  --image <tag>          Use an existing image as base (skip build)
+  --rebuild              Force rebuild of the base image (requires image.dockerfile)
+  --env-file <path>      Override .env path (default: <config-dir>/.env)
+  --keep-tags            Keep ephemeral image tags after the run (debug)
+  --output <dir>         Override output directory
+  --no-trace             Skip writing trace JSONL
+  --verbose, -v          Show full step output in the terminal
+  --llm-base-url <url>   Override LLM API endpoint
+  --llm-model <model>    Override LLM model name
 `);
 }
 
@@ -61,7 +72,14 @@ function hasFlag(args: string[], name: string): boolean {
 
 /** Positional path args (not flags / flag values). */
 function getPositionalArgs(args: string[]): string[] {
-	const flagWithValue = new Set(['--config', '--env-file']);
+	const flagWithValue = new Set([
+		'--config',
+		'--env-file',
+		'--image',
+		'--output',
+		'--llm-base-url',
+		'--llm-model',
+	]);
 	const result: string[] = [];
 	for (let i = 0; i < args.length; i++) {
 		const a = args[i]!;
@@ -190,6 +208,34 @@ function resolveTargetPaths(
 	return { paths: [...resolved] };
 }
 
+function resolveLlmConfig(
+	config: ReturnType<typeof parseConfig>,
+	args: string[],
+): LlmConfig | undefined {
+	const baseUrl = getFlagValue(args, '--llm-base-url');
+	const model = getFlagValue(args, '--llm-model');
+	if (!config.llm && !baseUrl && !model) {
+		return undefined;
+	}
+	if (!config.llm && (baseUrl || model)) {
+		if (!baseUrl || !model) {
+			throw new Error(
+				'LLM override requires both --llm-base-url and --llm-model when treespec.yaml has no llm section',
+			);
+		}
+		return {
+			base_url: baseUrl,
+			model,
+			api_key_env: 'OPENAI_API_KEY',
+		};
+	}
+	return {
+		base_url: baseUrl ?? config.llm!.base_url,
+		model: model ?? config.llm!.model,
+		api_key_env: config.llm!.api_key_env,
+	};
+}
+
 export async function runValidate(args: string[]): Promise<number> {
 	const loaded = await loadProjectConfig(args);
 	if ('error' in loaded) {
@@ -204,7 +250,10 @@ export async function runValidate(args: string[]): Promise<number> {
 
 	console.log(`Config: ${configPath}`);
 	console.log(`Specs:  ${specsRoot}`);
-	console.log(`Image:  ${config.image.tag} (dockerfile: ${config.image.dockerfile})`);
+	console.log(
+		`Image:  ${config.image.tag}` +
+			(config.image.dockerfile ? ` (dockerfile: ${config.image.dockerfile})` : ' (no dockerfile)'),
+	);
 	if (config.llm) {
 		console.log(`LLM:    ${config.llm.model} @ ${config.llm.base_url}`);
 	}
@@ -265,16 +314,44 @@ function printBuildProgress(event: BuildProgressEvent): void {
 	}
 }
 
-async function ensureBaseImage(
+/**
+ * Resolve the base image tag to use for a run.
+ * Priority: --image > image.dockerfile > error.
+ */
+async function resolveBaseImage(
 	config: ReturnType<typeof parseConfig>,
 	configDir: string,
-	rebuild: boolean,
-): Promise<number> {
+	args: string[],
+): Promise<{ tag: string } | { error: string; code: number }> {
+	const imageFlag = getFlagValue(args, '--image');
+	const rebuild = hasFlag(args, '--rebuild');
+
+	if (imageFlag && rebuild) {
+		return {
+			error: '--rebuild is only valid when building from image.dockerfile (not with --image)',
+			code: 1,
+		};
+	}
+
+	if (imageFlag) {
+		console.log(`Using image: ${imageFlag} (--image, skip build)`);
+		await pullImageIfMissing(imageFlag);
+		return { tag: imageFlag };
+	}
+
+	if (!config.image.dockerfile) {
+		return {
+			error:
+				'no image source: pass --image <tag> or set image.dockerfile in treespec.yaml',
+			code: 1,
+		};
+	}
+
 	const exists = await imageExists(config.image.tag);
 
 	if (exists && !rebuild) {
 		console.log(`skipping build, tag exists: ${config.image.tag}`);
-		return 0;
+		return { tag: config.image.tag };
 	}
 
 	if (exists && rebuild) {
@@ -286,16 +363,20 @@ async function ensureBaseImage(
 	const tag = await buildImage(config.image, configDir, printBuildProgress);
 	console.log();
 	console.log(`✓ Built ${tag}`);
-	return 0;
+	return { tag };
 }
 
 function printSummary(summary: RunSummary): void {
 	console.log();
+	const duration =
+		summary.duration_ms !== undefined
+			? ` ${DIM}(${summary.duration_ms}ms)${RESET}`
+			: '';
 	console.log(
 		`${BOLD}Summary${RESET}: ${summary.total} total, ` +
 			`${GREEN}${summary.passed} passed${RESET}, ` +
 			`${RED}${summary.failed} failed${RESET}, ` +
-			`${YELLOW}${summary.skipped} skipped${RESET}`,
+			`${YELLOW}${summary.skipped} skipped${RESET}${duration}`,
 	);
 }
 
@@ -307,13 +388,20 @@ export async function runRun(args: string[]): Promise<number> {
 	}
 
 	const { configPath, configDir, config } = loaded;
-	const rebuild = hasFlag(args, '--rebuild');
 	const keepTags = hasFlag(args, '--keep-tags');
+	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
+	const noTrace = hasFlag(args, '--no-trace');
 	const envFileFlag = getFlagValue(args, '--env-file');
+	const outputFlag = getFlagValue(args, '--output');
+	const imageFlag = getFlagValue(args, '--image');
 	const positionals = getPositionalArgs(args);
 	const envPath = envFileFlag
 		? resolve(process.cwd(), envFileFlag)
 		: join(configDir, '.env');
+	const outputDir = resolve(
+		configDir,
+		outputFlag ?? config.output ?? '.treespec-output',
+	);
 
 	if (envFileFlag) {
 		try {
@@ -322,6 +410,15 @@ export async function runRun(args: string[]): Promise<number> {
 			console.error(`Error: env file not found: ${envPath}`);
 			return 1;
 		}
+	}
+
+	let llm: LlmConfig | undefined;
+	try {
+		llm = resolveLlmConfig(config, args);
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(`Error: ${message}`);
+		return 1;
 	}
 
 	const fileEnv = await loadEnvFile(envPath);
@@ -335,17 +432,31 @@ export async function runRun(args: string[]): Promise<number> {
 	const specsRoot = resolve(configDir, config.specs);
 
 	console.log(`Config: ${configPath}`);
-	console.log(`Image:  ${config.image.tag}`);
-	console.log(`Dockerfile: ${config.image.dockerfile}`);
+	if (imageFlag) {
+		console.log(`Image:  ${imageFlag} (--image)`);
+	} else {
+		console.log(`Image:  ${config.image.tag}`);
+		if (config.image.dockerfile) {
+			console.log(`Dockerfile: ${config.image.dockerfile}`);
+		}
+	}
 	console.log(`Specs:  ${specsRoot}`);
+	console.log(`Output: ${outputDir}${noTrace ? ' (no-trace)' : ''}`);
+	if (llm) {
+		console.log(`LLM:    ${llm.model} @ ${llm.base_url}`);
+	}
 	if (keepTags) {
 		console.log(`Tags:   keep ephemeral (--keep-tags)`);
 	}
 	console.log();
 
 	try {
-		const buildCode = await ensureBaseImage(config, configDir, rebuild);
-		if (buildCode !== 0) return buildCode;
+		const resolved = await resolveBaseImage(config, configDir, args);
+		if ('error' in resolved) {
+			console.error(`Error: ${resolved.error}`);
+			return resolved.code;
+		}
+		const baseTag = resolved.tag;
 
 		const scanned = await scanSpecs(specsRoot);
 		if (scanned.errors.length > 0) {
@@ -384,9 +495,20 @@ export async function runRun(args: string[]): Promise<number> {
 			return 0;
 		}
 
-		const summary = await runForest(treesToRun, config.image.tag, env, {
+		const writeTrace = !noTrace;
+		const trace = await createTraceWriter(outputDir, writeTrace);
+		if (writeTrace && trace.filePath) {
+			console.log(`Trace:  ${trace.filePath}`);
+			console.log();
+		}
+
+		const summary = await runForest(treesToRun, baseTag, env, {
 			keepTags,
-			output: config.output,
+			output: outputDir,
+			writeTrace,
+			trace,
+			llm,
+			baseImage: baseTag,
 			specsDir: specsRoot,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);
@@ -401,13 +523,28 @@ export async function runRun(args: string[]): Promise<number> {
 			onStep: ({ depth, index, stepSummary, stepResult, verdict, reason, context, postconName }) => {
 				const pad = '  '.repeat(depth + 1);
 				const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-				const detail = 'exit_code' in stepResult
-					? `${DIM}exit ${stepResult.exit_code}${RESET}`
-					: `${DIM}status ${stepResult.status}${RESET}`;
+				const detail = isHttpStepResult(stepResult)
+					? `${DIM}status ${stepResult.status}${RESET}`
+					: `${DIM}exit ${stepResult.exit_code}${RESET}`;
 				const prefix = context === 'postcon' ? `postcon ${postconName} ` : '';
 				console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${detail}`);
 				if (verdict === 'FAIL') {
 					console.log(`${pad}  ${RED}${reason}${RESET}`);
+				}
+				if (verbose) {
+					if (isHttpStepResult(stepResult)) {
+						console.log(`${pad}  ${DIM}body:${RESET}`);
+						console.log(stepResult.body);
+					} else {
+						if (stepResult.stdout) {
+							console.log(`${pad}  ${DIM}stdout:${RESET}`);
+							console.log(stepResult.stdout);
+						}
+						if (stepResult.stderr) {
+							console.log(`${pad}  ${DIM}stderr:${RESET}`);
+							console.log(stepResult.stderr);
+						}
+					}
 				}
 			},
 		});
@@ -425,11 +562,100 @@ export async function runRun(args: string[]): Promise<number> {
 	}
 }
 
+export async function runTreeCmd(args: string[]): Promise<number> {
+	const loaded = await loadProjectConfig(args);
+	if ('error' in loaded) {
+		console.error(`Error: ${loaded.error}`);
+		return loaded.code;
+	}
+
+	const { configDir, config } = loaded;
+	const specsRoot = resolve(configDir, config.specs);
+	const result = await scanSpecs(specsRoot);
+
+	if (result.errors.length > 0) {
+		console.error(`Errors (${result.errors.length}):`);
+		for (const err of result.errors) {
+			console.error(`  ✗ ${err.path}: ${err.message}`);
+		}
+		return 1;
+	}
+
+	console.log('S₀ (base image)');
+	if (result.trees.length === 0) {
+		console.log('(empty — no spec.yaml found)');
+		return 0;
+	}
+	console.log(formatForest(result.trees));
+	return 0;
+}
+
+export async function runInit(args: string[]): Promise<number> {
+	const positionals = getPositionalArgs(args);
+	const target = positionals[0];
+	if (!target) {
+		console.error('Error: treespec init requires a path');
+		console.error('Usage: treespec init <path>');
+		return 1;
+	}
+
+	const root = resolve(process.cwd(), target);
+	const testsDir = join(root, 'tests');
+	const exampleDir = join(testsDir, 'example');
+	const configPath = join(root, 'treespec.yaml');
+
+	try {
+		await access(configPath);
+		console.error(`Error: already exists: ${configPath}`);
+		return 1;
+	} catch {
+		// ok — does not exist
+	}
+
+	try {
+		await mkdir(exampleDir, { recursive: true });
+
+		const configYaml = `image:
+  dockerfile: tests/Dockerfile
+  tag: myapp-test:base
+
+specs: tests
+`;
+
+		const dockerfile = `FROM node:22-alpine
+`;
+
+		const exampleSpec = `description: "example — echo hello"
+steps:
+  - type: exec
+    command: "echo hello"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "hello" }
+`;
+
+		await writeFile(configPath, configYaml, 'utf8');
+		await writeFile(join(testsDir, 'Dockerfile'), dockerfile, 'utf8');
+		await writeFile(join(exampleDir, 'spec.yaml'), exampleSpec, 'utf8');
+
+		console.log(`Created treespec project at ${root}`);
+		console.log('  treespec.yaml');
+		console.log('  tests/Dockerfile');
+		console.log('  tests/example/spec.yaml');
+		return 0;
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(`Error: ${message}`);
+		return 1;
+	}
+}
+
 export async function runClean(_args: string[]): Promise<number> {
 	try {
 		const removed = await cleanEphemeralTags();
 		if (removed.length === 0) {
-			console.log('No treespec/ephemeral:* tags to remove.');
+			console.log('No ephemeral tags to remove');
 			return 0;
 		}
 		console.log(`Removed ${removed.length} ephemeral tag(s):`);
@@ -459,6 +685,14 @@ export async function runCli(argv: string[]): Promise<number> {
 
 	if (command === 'run') {
 		return runRun(args.slice(1));
+	}
+
+	if (command === 'tree') {
+		return runTreeCmd(args.slice(1));
+	}
+
+	if (command === 'init') {
+		return runInit(args.slice(1));
 	}
 
 	if (command === 'clean') {

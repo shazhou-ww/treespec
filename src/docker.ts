@@ -128,7 +128,13 @@ export async function buildImage(
 	contextDir: string,
 	onProgress?: (data: BuildProgressEvent) => void,
 ): Promise<string> {
-	const dockerfilePath = join(contextDir, config.dockerfile);
+	if (!config.dockerfile) {
+		throw new Error(
+			'image.dockerfile is required to build (or pass --image <tag> to use an existing image)',
+		);
+	}
+	const dockerfile = config.dockerfile;
+	const dockerfilePath = join(contextDir, dockerfile);
 
 	try {
 		await access(dockerfilePath);
@@ -144,8 +150,8 @@ export async function buildImage(
 	const docker = getDocker();
 	const src = await listContextFiles(contextDir);
 
-	if (!src.includes(config.dockerfile.replace(/\\/g, '/'))) {
-		src.push(config.dockerfile.replace(/\\/g, '/'));
+	if (!src.includes(dockerfile.replace(/\\/g, '/'))) {
+		src.push(dockerfile.replace(/\\/g, '/'));
 	}
 
 	const buildargs: Record<string, string> = {};
@@ -164,7 +170,7 @@ export async function buildImage(
 			},
 			{
 				t: config.tag,
-				dockerfile: config.dockerfile.replace(/\\/g, '/'),
+				dockerfile: dockerfile.replace(/\\/g, '/'),
 				buildargs: Object.keys(buildargs).length > 0 ? buildargs : undefined,
 			},
 		);
