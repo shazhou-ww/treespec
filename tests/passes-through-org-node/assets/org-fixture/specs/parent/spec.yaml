@@ -1,0 +1,8 @@
+description: "parent node under org node"
+steps:
+  - type: exec
+    command: "echo from-parent"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "from-parent" }

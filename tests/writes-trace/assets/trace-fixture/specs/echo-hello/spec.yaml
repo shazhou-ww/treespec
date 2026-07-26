@@ -1,0 +1,8 @@
+description: "simple echo for trace test"
+steps:
+  - type: exec
+    command: "echo trace-test"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "trace-test" }

@@ -1,0 +1,18 @@
+description: "creates project scaffold with init command"
+steps:
+  - type: exec
+    command: "rm -rf /tmp/init-test && treespec init /tmp/init-test 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Created treespec project" }
+        - { path: "stdout", regex: "treespec.yaml" }
+        - { path: "stdout", regex: "Dockerfile" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "test -f /tmp/init-test/treespec.yaml && test -f /tmp/init-test/tests/Dockerfile && test -f /tmp/init-test/tests/example/spec.yaml && echo ok"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "ok" }
+        - { path: "exit_code", regex: "^0$" }

@@ -1,0 +1,23 @@
+description: "writes trace JSONL when not disabled"
+steps:
+  - type: exec
+    command: "rm -rf /tmp/trace-test-out && treespec run --config /app/tests/writes-trace/assets/trace-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags --output /tmp/trace-test-out 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec run --config /app/tests/writes-trace/assets/trace-fixture/treespec.yaml --image treespec-fixture:base --no-mount --keep-tags --output /tmp/trace-test-out 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "test -f /tmp/trace-test-out/trace.jsonl && head -1 /tmp/trace-test-out/trace.jsonl"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "meta" }
+        - { path: "exit_code", regex: "^0$" }

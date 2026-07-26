@@ -1,0 +1,8 @@
+description: "gamma node"
+steps:
+  - type: exec
+    command: "echo gamma"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "gamma" }
