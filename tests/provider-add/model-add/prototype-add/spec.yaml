@@ -1,0 +1,8 @@
+description: "Add a prototype from the model"
+steps:
+  - type: exec
+    command: "myapp prototype add demo --model claude-4-sonnet"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "prototype 'demo' added" }

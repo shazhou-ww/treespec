@@ -1,25 +1,39 @@
 {
-  "name": "treespec",
-  "version": "0.0.1",
-  "description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
-  "main": "index.js",
-  "bin": {
-    "treespec": "bin/treespec.js"
-  },
-  "keywords": [
-    "testing",
-    "spec",
-    "tree",
-    "docker",
-    "state",
-    "cli",
-    "e2e"
-  ],
-  "author": "Shazhou Family",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://git.shazhou.work/shazhou/treespec.git"
-  },
-  "homepage": "https://git.shazhou.work/shazhou/treespec"
+	"name": "treespec",
+	"version": "0.0.1",
+	"description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
+	"type": "module",
+	"main": "src/index.ts",
+	"bin": {
+		"treespec": "bin/treespec.js"
+	},
+	"scripts": {
+		"validate": "tsx src/index.ts validate",
+		"start": "tsx src/index.ts"
+	},
+	"keywords": [
+		"testing",
+		"spec",
+		"tree",
+		"docker",
+		"state",
+		"cli",
+		"e2e"
+	],
+	"author": "Shazhou Family",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://git.shazhou.work/shazhou/treespec.git"
+	},
+	"homepage": "https://git.shazhou.work/shazhou/treespec",
+	"dependencies": {
+		"yaml": "^2.8.0",
+		"zod": "^3.25.76"
+	},
+	"devDependencies": {
+		"@types/node": "^26.1.1",
+		"tsx": "^4.20.3",
+		"typescript": "^5.8.3"
+	}
 }

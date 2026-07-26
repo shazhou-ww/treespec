@@ -1,0 +1,7 @@
+description: "Add a persona"
+steps:
+  - command: "myapp persona add assistant"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "persona 'assistant' added" }

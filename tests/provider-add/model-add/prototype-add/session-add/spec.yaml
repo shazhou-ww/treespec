@@ -1,0 +1,11 @@
+description: "Start a session against the prototype"
+env:
+  - SESSION_TOKEN
+steps:
+  - type: exec
+    command: "myapp session add demo-session --prototype demo --token $SESSION_TOKEN"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "session 'demo-session' started" }
+        - { path: "exit_code", regex: "^0$" }

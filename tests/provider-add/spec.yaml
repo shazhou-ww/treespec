@@ -1,0 +1,25 @@
+description: "Add openrouter provider"
+env:
+  - OPENROUTER_API_KEY
+steps:
+  - type: exec
+    command: "myapp provider add openrouter --api-key $OPENROUTER_API_KEY"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "provider 'openrouter' added" }
+  - type: exec
+    command: "myapp provider list"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "openrouter" }
+postcon:
+  - name: verify-provider-persisted
+    steps:
+      - type: exec
+        command: "cat /data/providers.json"
+        assert:
+          type: regex
+          conditions:
+            - { path: "stdout", regex: "openrouter" }

@@ -1,0 +1,9 @@
+description: "Show CLI help"
+steps:
+  - type: exec
+    command: "myapp --help"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Usage:" }
+        - { path: "exit_code", regex: "^0$" }

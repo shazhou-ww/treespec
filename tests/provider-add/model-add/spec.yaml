@@ -1,0 +1,11 @@
+description: "Add claude-4-sonnet model"
+env:
+  - OPENROUTER_API_KEY
+steps:
+  - type: exec
+    command: "myapp model add claude-4-sonnet --provider openrouter"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+        - { path: "stdout", regex: "claude-4-sonnet" }

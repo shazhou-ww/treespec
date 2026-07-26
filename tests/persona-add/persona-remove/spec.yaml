@@ -1,0 +1,8 @@
+description: "Remove the persona"
+steps:
+  - type: exec
+    command: "myapp persona remove assistant"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "removed" }

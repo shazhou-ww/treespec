@@ -1,0 +1,7 @@
+image:
+  dockerfile: tests/Dockerfile
+  tag: treespec-fixture:base
+
+specs: tests
+
+output: .treespec-output
