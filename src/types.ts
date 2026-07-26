@@ -1,5 +1,8 @@
 /**
  * treespec — Type definitions for test case YAML (user-facing spec format)
+ *
+ * Each test case = a directory containing `spec.yaml`.
+ * The directory hierarchy IS the test tree — no parent field needed.
  */
 
 // ─── Assertion Types ────────────────────────────────────────────
@@ -53,6 +56,23 @@ export interface HttpRequest {
 	body?: unknown;
 }
 
+// ─── Wait Config ────────────────────────────────────────────────
+
+export interface WaitConfig {
+	/**
+	 * Max total wait time. E.g., "2m".
+	 * Elapsed time is measured from the first attempt's start.
+	 * Exceeding this → FAIL with reason "wait timeout exceeded".
+	 */
+	timeout: string;
+	/**
+	 * Delay between one attempt finishing and the next starting.
+	 * NOT a fixed polling period — the gap is inserted after each attempt completes.
+	 * Default: "5s".
+	 */
+	delay?: string;
+}
+
 // ─── Step Types (discriminated union) ────────────────────────────
 
 export interface ExecStep {
@@ -65,7 +85,7 @@ export interface ExecStep {
 	assert?: Assertion;
 	/**
 	 * Wait for a precondition to become true.
-	 * On assert FAIL: wait `interval`, re-execute the step, re-evaluate.
+	 * On assert FAIL: wait `delay`, re-execute the step, re-evaluate.
 	 * Repeats until PASS or `wait.timeout` exceeded.
 	 * Replaces atest's retry — models "wait for readiness", not "retry on failure".
 	 */
@@ -85,23 +105,6 @@ export interface HttpStep {
 
 export type Step = ExecStep | HttpStep;
 
-// ─── Wait Config ────────────────────────────────────────────────
-
-export interface WaitConfig {
-	/**
-	 * Max total wait time. E.g., "2m".
-	 * Elapsed time is measured from the first attempt's start.
-	 * Exceeding this → FAIL with reason "wait timeout exceeded".
-	 */
-	timeout: string;
-	/**
-	 * Delay between one attempt finishing and the next starting.
-	 * NOT a fixed polling period — the gap is inserted after each attempt completes.
-	 * Default: "5s".
-	 */
-	delay?: string;
-}
-
 // ─── PostCondition ──────────────────────────────────────────────
 
 export interface PostCondition {
@@ -111,19 +114,13 @@ export interface PostCondition {
 	steps: Step[];
 }
 
-// ─── TestCase ────────────────────────────────────────────────────
+// ─── Spec (test case definition in spec.yaml) ────────────────────
 
-export interface TestCase {
+export interface Spec {
 	/**
-	 * Parent node file path, relative to this file.
-	 * - Same dir:   './provider-add.yaml'
-	 * - Parent dir: '../provider/model-add.yaml'
-	 * Omit for root nodes (tree root = base image).
+	 * Human-readable description. Shown to LLM judge as context.
+	 * For longer documentation, use a companion .md file in the same directory.
 	 */
-	parent?: string;
-	/** Unique identifier for this test case. */
-	name: string;
-	/** Human-readable description. Shown to LLM judge as context. */
 	description?: string;
 	/**
 	 * Required environment variables.

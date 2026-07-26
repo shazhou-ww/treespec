@@ -10,6 +10,14 @@ export interface ImageConfig {
 	 * The Dockerfile builds the base image (S₀) for the test tree.
 	 */
 	dockerfile: string;
+	/**
+	 * Base image tag. treespec checks if this tag already exists:
+	 *   - exists + no --rebuild → skip build, use existing tag
+	 *   - exists + --rebuild    → rebuild
+	 *   - not exists             → build
+	 * Each project should specify its own unique tag to avoid collisions.
+	 */
+	tag: string;
 	/** Optional Docker build args. */
 	args?: Record<string, string>;
 }
@@ -38,12 +46,6 @@ export interface TreespecConfig {
 	/** Base image build configuration. Required. */
 	image: ImageConfig;
 	/**
-	 * Glob patterns to discover test case YAML files.
-	 * Patterns are relative to treespec.yaml location.
-	 * Example: ['tests/**/*.yaml']
-	 */
-	include: string[];
-	/**
 	 * LLM configuration for 'llm' assertion type.
 	 * Required only if any test case uses `assert: { type: 'llm' }`.
 	 */
@@ -57,6 +59,10 @@ export interface TreespecConfig {
 
 // ─── Conventions (not configurable) ─────────────────────────────
 
+// Test tree root: `tests/` directory next to treespec.yaml.
+// treespec recursively scans for directories containing spec.yaml.
+// Use `treespec run --tests-dir <path>` to override at runtime.
+//
 // .env is always read from treespec.yaml's directory.
 // Use `treespec run --env-file <path>` to override at runtime.
 //

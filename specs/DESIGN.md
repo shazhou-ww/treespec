@@ -78,13 +78,11 @@ S₃         = [T_provider-add, T_model-add, T_session-add]
 
 ### 3.1 定义
 
-一个测试用例 (TestCase) 是树上的一个**有向边**：
+一个测试用例 (TestCase) 是树上的一个**有向边**，定义为每个目录下的 `spec.yaml`：
 
 ```typescript
-type TestCase = {
-  parent: string;              // 父节点文件路径（相对路径，根节点省略或为 null）
-  name: string;                // 用例标识
-  description: string;         // 用例描述
+type Spec = {
+  description: string;         // 用例描述（可选，详细文档用 .md 文件）
   env: string[];               // 所需环境变量（缺失则跳过并报告）
   steps: Step[];               // 主步骤（在 pre-condition 容器内执行）
   postcon: PostCondition[];    // 0~N 个后置条件（在 post-condition 容器内执行）
@@ -208,29 +206,44 @@ TestCase 的**任何判定失败**（step assert 或 postcon assert），都会�
 
 ### 4.4 树的组织方式
 
-**扁平多文件，parent 用相对文件路径引用：**
+**目录树 = 测试树。** 每个含 `spec.yaml` 的目录是一个节点，目录嵌套 = 父子关系。
 
 ```
 tests/
-  treespec.yaml                 # 项目配置
-  provider/
-    provider-add.yaml           # 根节点（parent: null 或省略）
-    model-add.yaml              # parent: ./provider-add.yaml
-    prototype-add.yaml          # parent: ./model-add.yaml
-  session/
-    session-add.yaml            # parent: ../provider/prototype-add.yaml
-  persona/
-    persona-add.yaml            # 根节点
+  provider-add/                 # 根节点
+    spec.yaml
+    README.md                   # 可选：文档说明
+    model-add/
+      spec.yaml
+      prototype-add/
+        spec.yaml
+        session-add/
+          spec.yaml
+          session-stop/
+            spec.yaml
+          session-remove/
+            spec.yaml
+        prototype-update/
+          spec.yaml
+      model-update/
+        spec.yaml
+    provider-update/
+      spec.yaml
+  persona-add/
+    spec.yaml
+    persona-remove/
+      spec.yaml
+  help-command/                 # 叶子节点，无子目录
+    spec.yaml
 ```
 
-**Parent 引用规则：**
-- 根节点：`parent: null` 或省略 parent 字段
-- 子节点：`parent` 是相对于当前文件的 YAML 文件路径
-- 同目录：`parent: ./provider-add.yaml`
-- 跨目录：`parent: ../provider/model-add.yaml`
-- 父文件必须在 include 范围内，否则报错
+**规则：**
+- 每个目录含一个 `spec.yaml` = 一个测试用例
+- 目录名 = 用例名（无需在 spec.yaml 中声明 `name`）
+- 子目录的 parent = 直接父目录（无需 `parent` 字段）
+- 可选 `.md` 文件放在同目录做文档说明
 
-**文件系统即树结构**——目录层级自然反映树的层级，不需要全局注册表。
+**消除了：** parent 引用、parent 校验、循环依赖检测——文件系统天然保证结构正确。
 
 ---
 
@@ -353,18 +366,16 @@ treespec/ephemeral:<node-name>
 ```yaml
 image:
   dockerfile: tests/Dockerfile
-  args:                          # 可选
+  tag: myapp-test:base            # base image tag（存在则跳过 build，--rebuild 强制重建）
+  args:                           # 可选
     NODE_VERSION: "22"
 
-include:
-  - tests/**/*.yaml
-
-llm:                            # 可选，仅在使用 llm assertion 时需要
+llm:                              # 可选，仅在使用 llm assertion 时需要
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
   api_key_env: "OPENAI_API_KEY"
 
-output: .treespec-output         # 可选
+output: .treespec-output          # 可选
 ```
 
 ### 7.2 字段说明
@@ -372,28 +383,28 @@ output: .treespec-output         # 可选
 | 字段 | 必填 | 说明 |
 |:-----|:-----|:-----|
 | `image.dockerfile` | ✅ | Dockerfile 路径（相对于 treespec.yaml） |
+| `image.tag` | ✅ | Base image tag。已存在则跳过 build，`--rebuild` 强制重建 |
 | `image.args` | ❌ | Docker build args，key-value map |
-| `include` | ✅ | Test case 文件的 glob patterns |
 | `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
 | `llm.model` | ❌ | LLM 模型名 |
 | `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |
 | `output` | ❌ | 测试输出目录（默认 `.treespec-output`） |
 
-**环境变量**：`.env` 文件约定放在 treespec.yaml 同目录，无需配置。CLI `--env-file` 可覆盖。
-
-环境变量来源优先级：
-1. Shell 环境变量
-2. `.env` 文件（treespec.yaml 同目录，或 `--env-file` 覆盖）
-3. TestCase 的 `env` 字段声明所需变量（缺失则 SKIP）
+**约定（无需配置）：**
+- 测试树根目录：treespec.yaml 同目录下的 `tests/`，递归扫描含 `spec.yaml` 的子目录
+- CLI `--tests-dir <path>` 可覆盖
+- `.env` 文件约定放在 treespec.yaml 同目录，CLI `--env-file` 可覆盖
 
 **Docker build context** = treespec.yaml 所在目录（不可配置）。
 
-### 7.3 CLI 覆盖
+### 7.3 CLI
 
 ```bash
-treespec run                          # 用 treespec.yaml 默认配置
-treespec run --env-file x.env         # 覆盖 env_file
-treespec run tests/provider/          # 只跑子集（但会检查 parent 依赖完整性）
+treespec run                                # 跑完整测试树
+treespec run tests/provider-add/model-add/  # 跑子树（自动含祖先链）
+treespec run tests/*/*/                     # glob 多个子树
+treespec run --rebuild                      # 强制重建 base image
+treespec run --env-file x.env               # 覆盖 .env
 ```
 
 ### 7.4 Base Image 构建
@@ -421,8 +432,7 @@ WORKDIR /app
 ### 8.1 TestCase 示例
 
 ```yaml
-# tests/provider/provider-add.yaml
-name: provider-add
+# tests/provider-add/spec.yaml
 description: "添加 openrouter provider"
 env:
   - OPENROUTER_API_KEY
@@ -449,9 +459,7 @@ postcon:
 ```
 
 ```yaml
-# tests/provider/model-add.yaml
-name: model-add
-parent: ./provider-add.yaml
+# tests/provider-add/model-add/spec.yaml
 description: "添加 claude-4-sonnet model"
 env:
   - OPENROUTER_API_KEY
