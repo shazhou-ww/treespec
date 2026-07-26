@@ -352,8 +352,6 @@ image:
 include:
   - tests/**/*.yaml
 
-env_file: tests/.env            # 可选，默认同目录 .env，CLI 可覆盖
-
 llm:                            # 可选，仅在使用 llm assertion 时需要
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
@@ -369,11 +367,17 @@ output: .treespec-output         # 可选
 | `image.dockerfile` | ✅ | Dockerfile 路径（相对于 treespec.yaml） |
 | `image.args` | ❌ | Docker build args，key-value map |
 | `include` | ✅ | Test case 文件的 glob patterns |
-| `env_file` | ❌ | 环境变量文件路径（默认 = treespec.yaml 同目录 `.env`） |
 | `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
 | `llm.model` | ❌ | LLM 模型名 |
 | `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |
 | `output` | ❌ | 测试输出目录（默认 `.treespec-output`） |
+
+**环境变量**：`.env` 文件约定放在 treespec.yaml 同目录，无需配置。CLI `--env-file` 可覆盖。
+
+环境变量来源优先级：
+1. Shell 环境变量
+2. `.env` 文件（treespec.yaml 同目录，或 `--env-file` 覆盖）
+3. TestCase 的 `env` 字段声明所需变量（缺失则 SKIP）
 
 **Docker build context** = treespec.yaml 所在目录（不可配置）。
 

@@ -44,11 +44,6 @@ export interface TreespecConfig {
 	 */
 	include: string[];
 	/**
-	 * Path to environment file. Default: treespec.yaml's sibling '.env'.
-	 * CLI flag --env-file overrides this.
-	 */
-	env_file?: string;
-	/**
 	 * LLM configuration for 'llm' assertion type.
 	 * Required only if any test case uses `assert: { type: 'llm' }`.
 	 */
@@ -59,3 +54,13 @@ export interface TreespecConfig {
 	 */
 	output?: string;
 }
+
+// ─── Conventions (not configurable) ─────────────────────────────
+
+// .env is always read from treespec.yaml's directory.
+// Use `treespec run --env-file <path>` to override at runtime.
+//
+// Env var resolution order:
+//   1. Shell environment variables
+//   2. .env file (treespec.yaml's sibling, or --env-file override)
+//   3. TestCase `env` field declares required vars (missing → SKIP)
