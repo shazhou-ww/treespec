@@ -1,13 +1,15 @@
-description: "treespec CLI with no args should show help"
+description: "shows help with commands and cross-references when called with no args"
 steps:
   - type: exec
     command: "treespec 2>&1 || true"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "Usage" }
-        - { path: "stdout", regex: "validate" }
-        - { path: "stdout", regex: "run" }
-        - { path: "stdout", regex: "tree" }
-        - { path: "stdout", regex: "init" }
-        - { path: "stdout", regex: "clean" }
+        - { path: "stdout", regex: "tree-structured" }
+        - { path: "stdout", regex: "treespec run" }
+        - { path: "stdout", regex: "treespec validate" }
+        - { path: "stdout", regex: "treespec tree" }
+        - { path: "stdout", regex: "treespec init" }
+        - { path: "stdout", regex: "treespec clean" }
+        - { path: "stdout", regex: "For details" }
+        - { path: "stdout", regex: "run --help" }

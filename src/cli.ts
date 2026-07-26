@@ -2,9 +2,10 @@
  * treespec — CLI commands
  */
 
-import { access, mkdir, writeFile } from 'node:fs/promises';
-import { readFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { LlmConfig } from './config.js';
 import {
 	buildImage,
@@ -35,30 +36,22 @@ const YELLOW = '\x1b[33m';
 const DIM = '\x1b[2m';
 const CYAN = '\x1b[36m';
 
+const __moduleDir = dirname(fileURLToPath(import.meta.url));
+
+function loadHelp(name: string): string {
+	const pkg = JSON.parse(readFileSync(join(__moduleDir, '..', 'package.json'), 'utf8'));
+	const version = pkg.version ?? '0.0.0';
+	const helpPath = join(__moduleDir, '..', 'help', `${name}.md`);
+	try {
+		const content = readFileSync(helpPath, 'utf8');
+		return content.replace(/\{\{version\}\}/g, version);
+	} catch {
+		return `treespec v${version} — tree-structured, stateful test system\n\n( help file not found: ${name}.md )\n`;
+	}
+}
+
 export function printHelp(): void {
-	console.log(`treespec — tree-structured, stateful test system
-
-Usage:
-  treespec validate [--config <path>]              Validate treespec.yaml and the test tree
-  treespec run [paths...] [options]                DFS-execute the test tree (or covering subtrees)
-  treespec tree [--config <path>]                  Visualize the test tree structure
-  treespec init <path>                             Create a project scaffold
-  treespec clean                                   Remove all treespec/ephemeral:* tags
-  treespec help                                    Show this help
-
-Options:
-  --config <path>        Path to treespec.yaml (default: ./treespec.yaml)
-  --image <tag>          Use an existing image as base (skip build)
-  --rebuild              Force rebuild of the base image (requires image.dockerfile)
-  --env-file <path>      Override .env path (default: <config-dir>/.env)
-  --keep-tags            Keep ephemeral image tags after the run (debug)
-  --output <dir>         Override output directory
-  --no-trace             Skip writing trace JSONL
-  --no-mount             Specs are in image (skip bind mount, use image path)
-  --verbose, -v          Show full step output in the terminal
-  --llm-base-url <url>   Override LLM API endpoint
-  --llm-model <model>    Override LLM model name
-`);
+	console.log(loadHelp('main'));
 }
 
 function getFlagValue(args: string[], name: string): string | undefined {
@@ -683,23 +676,48 @@ export async function runCli(argv: string[]): Promise<number> {
 	}
 
 	if (command === 'validate') {
-		return runValidate(args.slice(1));
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('validate'));
+			return 0;
+		}
+		return runValidate(subArgs);
 	}
 
 	if (command === 'run') {
-		return runRun(args.slice(1));
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('run'));
+			return 0;
+		}
+		return runRun(subArgs);
 	}
 
 	if (command === 'tree') {
-		return runTreeCmd(args.slice(1));
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('tree'));
+			return 0;
+		}
+		return runTreeCmd(subArgs);
 	}
 
 	if (command === 'init') {
-		return runInit(args.slice(1));
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('init'));
+			return 0;
+		}
+		return runInit(subArgs);
 	}
 
 	if (command === 'clean') {
-		return runClean(args.slice(1));
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('clean'));
+			return 0;
+		}
+		return runClean(subArgs);
 	}
 
 	console.error(`Unknown command: ${command}`);
