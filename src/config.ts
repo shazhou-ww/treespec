@@ -1,0 +1,61 @@
+/**
+ * treespec — Type definitions for treespec.yaml (project configuration)
+ */
+
+// ─── Image Config ───────────────────────────────────────────────
+
+export interface ImageConfig {
+	/**
+	 * Dockerfile path, relative to treespec.yaml.
+	 * The Dockerfile builds the base image (S₀) for the test tree.
+	 */
+	dockerfile: string;
+	/** Optional Docker build args. */
+	args?: Record<string, string>;
+}
+
+// ─── LLM Config ─────────────────────────────────────────────────
+
+export interface LlmConfig {
+	/**
+	 * OpenAI-compatible API endpoint.
+	 * Example: 'https://api.openai.com/v1'
+	 */
+	base_url: string;
+	/** Model name. Example: 'gpt-4o'. */
+	model: string;
+	/**
+	 * Name of the environment variable that holds the API key.
+	 * The key itself is never written to YAML — only the env var name.
+	 * Example: 'OPENAI_API_KEY' → treespec reads $OPENAI_API_KEY at runtime.
+	 */
+	api_key_env: string;
+}
+
+// ─── Project Config ─────────────────────────────────────────────
+
+export interface TreespecConfig {
+	/** Base image build configuration. Required. */
+	image: ImageConfig;
+	/**
+	 * Glob patterns to discover test case YAML files.
+	 * Patterns are relative to treespec.yaml location.
+	 * Example: ['tests/**/*.yaml']
+	 */
+	include: string[];
+	/**
+	 * Path to environment file. Default: treespec.yaml's sibling '.env'.
+	 * CLI flag --env-file overrides this.
+	 */
+	env_file?: string;
+	/**
+	 * LLM configuration for 'llm' assertion type.
+	 * Required only if any test case uses `assert: { type: 'llm' }`.
+	 */
+	llm?: LlmConfig;
+	/**
+	 * Output directory for test results and logs.
+	 * Default: '.treespec-output'
+	 */
+	output?: string;
+}
