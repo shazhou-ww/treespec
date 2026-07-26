@@ -1,7 +1,7 @@
 description: "verifies docker commit chain passes state through tree"
 steps:
   - type: exec
-    command: "treespec run --config /app/tests/commits-state/assets/commit-chain-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
+    command: "treespec run --config /specs/commits-state/assets/commit-chain-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

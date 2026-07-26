@@ -12,7 +12,11 @@ RUN npm install -g tsx
 # Copy source code
 COPY . .
 
-# Link the CLI globally
+# Link source code
 RUN npm link
+
+# Create /specs symlink so --no-mount (DinD) can access tests via /specs path
+# Outer run mounts over this; inner --no-mount uses the symlink
+RUN ln -s /app/tests /specs
 
 WORKDIR /app
