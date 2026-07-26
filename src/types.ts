@@ -63,6 +63,13 @@ export interface ExecStep {
 	timeout?: string;
 	/** Assertion on step output. Omit = transition step (exit code 0 = PASS). */
 	assert?: Assertion;
+	/**
+	 * Wait for a precondition to become true.
+	 * On assert FAIL: wait `interval`, re-execute the step, re-evaluate.
+	 * Repeats until PASS or `wait.timeout` exceeded.
+	 * Replaces atest's retry — models "wait for readiness", not "retry on failure".
+	 */
+	wait?: WaitConfig;
 }
 
 export interface HttpStep {
@@ -72,9 +79,28 @@ export interface HttpStep {
 	timeout?: string;
 	/** Assertion on response. Omit = transition step (HTTP 2xx = PASS). */
 	assert?: Assertion;
+	/** Wait for a precondition. See ExecStep.wait. */
+	wait?: WaitConfig;
 }
 
 export type Step = ExecStep | HttpStep;
+
+// ─── Wait Config ────────────────────────────────────────────────
+
+export interface WaitConfig {
+	/**
+	 * Max total wait time. E.g., "2m".
+	 * Elapsed time is measured from the first attempt's start.
+	 * Exceeding this → FAIL with reason "wait timeout exceeded".
+	 */
+	timeout: string;
+	/**
+	 * Delay between one attempt finishing and the next starting.
+	 * NOT a fixed polling period — the gap is inserted after each attempt completes.
+	 * Default: "5s".
+	 */
+	delay?: string;
+}
 
 // ─── PostCondition ──────────────────────────────────────────────
 

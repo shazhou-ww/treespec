@@ -102,6 +102,7 @@ type HttpStep = {
   request: HttpRequest;
   timeout?: string;            // 如 "30s", "2m"
   assert?: Assertion;
+  wait?: WaitConfig;
 }
 
 type ExecStep = {
@@ -109,6 +110,12 @@ type ExecStep = {
   command: string;
   timeout?: string;            // 如 "30s", "2m"
   assert?: Assertion;
+  wait?: WaitConfig;           // 等待前置条件就绪
+}
+
+type WaitConfig = {
+  timeout: string;             // 总等待上限，如 "2m"
+  delay?: string;               // 两次执行间的间隔（非轮询周期），默认 "5s"
 }
 
 type Assertion = LlmAssertion | JsonataAssertion | RegexAssertion
