@@ -1,8 +1,9 @@
 description: "executes a command and asserts stdout"
 steps:
   - type: exec
-    command: "echo hello"
+    command: "treespec run --config /app/tests/executes-command/assets/exec-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "hello" }
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }

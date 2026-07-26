@@ -1,13 +1,9 @@
 description: "waits for background process to become ready"
 steps:
   - type: exec
-    command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
-  - type: exec
-    command: "cat /tmp/ready"
-    wait:
-      timeout: "30s"
-      delay: "2s"
+    command: "treespec run --config /app/tests/waits-for-readiness/assets/wait-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "ready" }
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }

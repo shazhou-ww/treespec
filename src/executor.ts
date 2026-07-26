@@ -24,6 +24,11 @@ export interface CreateContainerOptions {
 	 * Becomes WorkingDir `/specs/<workdir>`.
 	 */
 	workdir?: string;
+	/**
+	 * When true, specs are already in the image (baked via COPY).
+	 * Skip the bind mount; use specsDir as WorkingDir directly.
+	 */
+	noMount?: boolean;
 }
 
 export interface RunInContainerOptions extends CreateContainerOptions {
@@ -109,12 +114,28 @@ export async function createAndStartContainer(
 		HostConfig: hostConfig,
 	};
 
-	if (options.specsDir) {
-		hostConfig.Binds = [`${options.specsDir}:/specs:ro`];
+	const binds: string[] = [];
+
+	if (options.noMount) {
+		// Specs already in image (baked via COPY). No bind mount needed.
+		const relative = options.workdir && options.workdir !== '.'
+			? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
+			: '';
+		createOpts.WorkingDir = relative
+			? `${options.specsDir}/${relative}`
+			: (options.specsDir ?? undefined);
+	} else if (options.specsDir) {
+		binds.push(`${options.specsDir}:/specs:ro`);
 		const relative = options.workdir && options.workdir !== '.'
 			? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
 			: '';
 		createOpts.WorkingDir = relative ? `/specs/${relative}` : '/specs';
+	}
+
+	// Always mount Docker socket so containers can use Docker-in-Docker
+	binds.push('/var/run/docker.sock:/var/run/docker.sock');
+	if (binds.length > 0) {
+		hostConfig.Binds = binds;
 	}
 
 	try {

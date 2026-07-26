@@ -3,7 +3,9 @@ env:
   - SILICONFLOW_API_KEY
 steps:
   - type: exec
-    command: "echo hello world"
+    command: "treespec run --config /app/tests/judges-with-llm/assets/llm-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
-      type: llm
-      prompt: "Does the output contain the word hello?"
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }

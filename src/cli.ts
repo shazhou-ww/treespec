@@ -54,6 +54,7 @@ Options:
   --keep-tags            Keep ephemeral image tags after the run (debug)
   --output <dir>         Override output directory
   --no-trace             Skip writing trace JSONL
+  --no-mount             Specs are in image (skip bind mount, use image path)
   --verbose, -v          Show full step output in the terminal
   --llm-base-url <url>   Override LLM API endpoint
   --llm-model <model>    Override LLM model name
@@ -251,8 +252,8 @@ export async function runValidate(args: string[]): Promise<number> {
 	console.log(`Config: ${configPath}`);
 	console.log(`Specs:  ${specsRoot}`);
 	console.log(
-		`Image:  ${config.image.tag}` +
-			(config.image.dockerfile ? ` (dockerfile: ${config.image.dockerfile})` : ' (no dockerfile)'),
+		`Image:  ${config.image?.tag ?? '(none)'}` +
+			(config.image?.dockerfile ? ` (dockerfile: ${config.image.dockerfile})` : ' (no dockerfile)'),
 	);
 	if (config.llm) {
 		console.log(`LLM:    ${config.llm.model} @ ${config.llm.base_url}`);
@@ -339,7 +340,7 @@ async function resolveBaseImage(
 		return { tag: imageFlag };
 	}
 
-	if (!config.image.dockerfile) {
+	if (!config.image?.dockerfile) {
 		return {
 			error:
 				'no image source: pass --image <tag> or set image.dockerfile in treespec.yaml',
@@ -391,6 +392,7 @@ export async function runRun(args: string[]): Promise<number> {
 	const keepTags = hasFlag(args, '--keep-tags');
 	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
 	const noTrace = hasFlag(args, '--no-trace');
+	const noMount = hasFlag(args, '--no-mount');
 	const envFileFlag = getFlagValue(args, '--env-file');
 	const outputFlag = getFlagValue(args, '--output');
 	const imageFlag = getFlagValue(args, '--image');
@@ -435,8 +437,8 @@ export async function runRun(args: string[]): Promise<number> {
 	if (imageFlag) {
 		console.log(`Image:  ${imageFlag} (--image)`);
 	} else {
-		console.log(`Image:  ${config.image.tag}`);
-		if (config.image.dockerfile) {
+		console.log(`Image:  ${config.image?.tag ?? '(none)'}`);
+		if (config.image?.dockerfile) {
 			console.log(`Dockerfile: ${config.image.dockerfile}`);
 		}
 	}
@@ -510,6 +512,7 @@ export async function runRun(args: string[]): Promise<number> {
 			llm,
 			baseImage: baseTag,
 			specsDir: specsRoot,
+			noMount,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);
 				const label = node.spec

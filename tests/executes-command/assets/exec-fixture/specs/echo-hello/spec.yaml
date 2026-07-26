@@ -1,0 +1,8 @@
+description: "echo hello and assert stdout"
+steps:
+  - type: exec
+    command: "echo hello"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "hello" }

@@ -103,7 +103,7 @@ const LlmConfigSchema = z.object({
 });
 
 export const TreespecConfigSchema = z.object({
-	image: ImageConfigSchema,
+	image: ImageConfigSchema.optional(),
 	specs: z.string().min(1),
 	llm: LlmConfigSchema.optional(),
 	output: z.string().min(1).optional(),

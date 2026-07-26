@@ -42,6 +42,8 @@ export interface RunConfig {
 	llm?: LlmConfig;
 	/** Base image tag (written into trace meta). */
 	baseImage?: string;
+	/** When true, specs are in the image — skip bind mount, use image path as workdir. */
+	noMount?: boolean;
 	onNode?: (info: {
 		node: TreeNode;
 		result: NodeResult;
@@ -416,6 +418,7 @@ export async function runTree(
 				env,
 				specsDir: config.specsDir,
 				workdir: node.path,
+				noMount: config.noMount,
 			});
 		}
 
@@ -465,6 +468,7 @@ export async function runTree(
 						env,
 						specsDir: config.specsDir,
 						workdir: node.path,
+						noMount: config.noMount,
 					});
 					const postconSpec: Spec = {
 						description: `${spec.description ?? node.path} / postcon ${postcon.name}`,

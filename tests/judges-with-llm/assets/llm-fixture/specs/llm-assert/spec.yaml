@@ -1,0 +1,9 @@
+description: "LLM judges command output"
+env:
+  - SILICONFLOW_API_KEY
+steps:
+  - type: exec
+    command: "echo hello world"
+    assert:
+      type: llm
+      prompt: "Does the output contain the word hello?"

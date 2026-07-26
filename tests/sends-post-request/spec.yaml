@@ -1,15 +1,9 @@
 description: "sends HTTP POST and asserts JSON response"
 steps:
-  - type: http
-    request:
-      method: POST
-      url: "https://httpbingo.org/post"
-      headers:
-        Content-Type: "application/json"
-        X-Test-Token: "treespec-test"
-      body:
-        hello: "world"
-        source: "treespec"
+  - type: exec
+    command: "treespec run --config /app/tests/sends-post-request/assets/http-post-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
     assert:
-      type: jsonata
-      expression: "status = 200 and json.hello = 'world' and json.source = 'treespec'"
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "1 passed" }
+        - { path: "exit_code", regex: "^0$" }

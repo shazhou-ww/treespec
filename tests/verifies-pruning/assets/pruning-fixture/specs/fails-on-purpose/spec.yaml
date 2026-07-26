@@ -1,0 +1,4 @@
+description: "intentional failure to trigger pruning"
+steps:
+  - type: exec
+    command: "exit 1"

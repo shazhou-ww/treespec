@@ -1,4 +1,4 @@
-description: "skips child when parent fails"
+description: "should be skipped when parent fails"
 steps:
   - type: exec
     command: "echo should-not-run"
