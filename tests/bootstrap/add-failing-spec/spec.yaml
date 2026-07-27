@@ -1,8 +1,0 @@
-description: "add a valid spec that will always fail"
-steps:
-  - type: exec
-    command: "mkdir -p /tmp/bootstrap-project/tests/fail-case && cat > /tmp/bootstrap-project/tests/fail-case/spec.yaml << 'SPEC'\ndescription: \"always fails\"\nsteps:\n  - type: exec\n    command: \"exit 1\"\n    assert:\n      type: regex\n      conditions:\n        - { path: \"exit_code\", regex: \"^0$\" }\nSPEC"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }

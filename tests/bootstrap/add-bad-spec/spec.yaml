@@ -1,7 +1,18 @@
 description: "add a spec with invalid assertion type"
 steps:
   - type: exec
-    command: "mkdir -p /tmp/bootstrap-project/tests/broken-spec && cat > /tmp/bootstrap-project/tests/broken-spec/spec.yaml << 'SPEC'\ndescription: \"broken spec with invalid assert\"\nsteps:\n  - type: exec\n    command: \"echo hi\"\n    assert:\n      type: nonexistent\n      conditions:\n        - { path: \"stdout\", regex: \"hi\" }\nSPEC"
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/broken-spec
+      cat > /tmp/bootstrap-project/tests/broken-spec/spec.yaml << 'SPEC'
+      description: "broken spec with invalid assert"
+      steps:
+        - type: exec
+          command: "echo hi"
+          assert:
+            type: nonexistent
+            conditions:
+              - { path: "stdout", regex: "hi" }
+      SPEC
     assert:
       type: regex
       conditions:

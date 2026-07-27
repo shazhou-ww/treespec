@@ -1,4 +1,4 @@
-description: "validate after adding a correct spec"
+description: "validate after adding all specs"
 steps:
   - type: exec
     command: "treespec validate --config /tmp/bootstrap-project/treespec.yaml 2>&1"
@@ -6,4 +6,6 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "Valid" }
+        - { path: "stdout", regex: "echo-hello" }
+        - { path: "stdout", regex: "http-get" }
         - { path: "exit_code", regex: "^0$" }

@@ -1,8 +1,0 @@
-description: "alpha node"
-steps:
-  - type: exec
-    command: "echo alpha"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "alpha" }

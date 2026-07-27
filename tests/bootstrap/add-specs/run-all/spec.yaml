@@ -1,0 +1,10 @@
+description: "run all specs — expect 3 passed (example, echo-hello, http-get) and 2 failed (fail-case, http-fail)"
+steps:
+  - type: exec
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml --no-mount --no-trace --rebuild 2>&1; true"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "3 passed" }
+        - { path: "stdout", regex: "2 failed" }
+        - { path: "exit_code", regex: "^0$" }

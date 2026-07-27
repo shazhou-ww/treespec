@@ -845,9 +845,8 @@ export async function runShow(args: string[]): Promise<number> {
 		}
 	}
 
-	if (summary && ((summary.failed as number) > 0 || (summary.skipped as number) > 0)) {
-		return 1;
-	}
+	// show is a read-only command — always succeeds when it can display the trace,
+	// regardless of whether the trace contains failures.
 	return 0;
 }
 

@@ -1,0 +1,74 @@
+description: "add passing and failing specs (exec + http step types)"
+steps:
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/echo-hello
+      cat > /tmp/bootstrap-project/tests/echo-hello/spec.yaml << 'SPEC'
+      description: "exec passing — echo hello"
+      steps:
+        - type: exec
+          command: "echo hello"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "hello" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/fail-case
+      cat > /tmp/bootstrap-project/tests/fail-case/spec.yaml << 'SPEC'
+      description: "exec failing — exit 1"
+      steps:
+        - type: exec
+          command: "exit 1"
+          assert:
+            type: regex
+            conditions:
+              - { path: "exit_code", regex: "^0$" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/http-get
+      cat > /tmp/bootstrap-project/tests/http-get/spec.yaml << 'SPEC'
+      description: "http passing — GET with regex assert"
+      steps:
+        - type: http
+          request:
+            method: GET
+            url: "https://httpbingo.org/get"
+          assert:
+            type: regex
+            conditions:
+              - { path: "status", regex: "^200$" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/http-fail
+      cat > /tmp/bootstrap-project/tests/http-fail/spec.yaml << 'SPEC'
+      description: "http failing — assert wrong status"
+      steps:
+        - type: http
+          request:
+            method: GET
+            url: "https://httpbingo.org/get"
+          assert:
+            type: regex
+            conditions:
+              - { path: "status", regex: "^999$" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }

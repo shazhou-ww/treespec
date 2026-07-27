@@ -1,0 +1,12 @@
+description: "show tree after specs are added"
+steps:
+  - type: exec
+    command: "treespec tree --config /tmp/bootstrap-project/treespec.yaml 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "echo-hello" }
+        - { path: "stdout", regex: "fail-case" }
+        - { path: "stdout", regex: "http-get" }
+        - { path: "stdout", regex: "http-fail" }
+        - { path: "exit_code", regex: "^0$" }

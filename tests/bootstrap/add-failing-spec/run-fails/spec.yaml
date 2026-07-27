@@ -1,9 +1,0 @@
-description: "run the failing case and expect failure"
-steps:
-  - type: exec
-    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml fail-case --no-mount --no-trace --rebuild 2>&1; true"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "1 failed" }
-        - { path: "exit_code", regex: "^0$" }
