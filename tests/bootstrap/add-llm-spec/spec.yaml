@@ -1,0 +1,20 @@
+description: "add LLM assert spec"
+env:
+  - TREESPEC_LLM_API_KEY
+steps:
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/llm-assert
+      cat > /tmp/bootstrap-project/tests/llm-assert/spec.yaml << 'SPEC'
+      description: "LLM judges command output"
+      steps:
+        - type: exec
+          command: "echo hello world"
+          assert:
+            type: llm
+            prompt: "Does the output contain the word hello?"
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
