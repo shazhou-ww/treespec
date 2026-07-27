@@ -1,51 +1,51 @@
 {
-	"name": "treespec",
-	"version": "0.0.1",
-	"description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
-	"type": "module",
-	"main": "dist/index.js",
-	"bin": {
-		"treespec": "bin/treespec.js"
-	},
-	"scripts": {
-		"build": "tsc",
-		"dev": "tsx src/index.ts",
-		"validate": "tsx src/index.ts validate",
-		"start": "tsx src/index.ts",
-		"prepack": "tsc"
-	},
-	"keywords": [
-		"testing",
-		"spec",
-		"tree",
-		"docker",
-		"state",
-		"cli",
-		"e2e"
-	],
-	"author": "Shazhou Family",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://git.shazhou.work/shazhou/treespec.git"
-	},
-	"homepage": "https://git.shazhou.work/shazhou/treespec",
-	"files": [
-		"dist",
-		"help",
-		"bin"
-	],
-	"dependencies": {
-		"dockerode": "^5.0.1",
-		"jsonata": "^2.2.2",
-		"yaml": "^2.8.0",
-		"zod": "^3.25.76"
-	},
-	"devDependencies": {
-		"@types/dockerode": "^4.0.1",
-		"@types/jsonata": "^1.5.1",
-		"@types/node": "^26.1.1",
-		"tsx": "^4.20.3",
-		"typescript": "^5.8.3"
-	}
+  "name": "treespec",
+  "version": "0.1.0",
+  "description": "Tree-structured, stateful test system \u2014 state isolation via Docker commit chains, DFS traversal with failure pruning.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "treespec": "bin/treespec.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "validate": "tsx src/index.ts validate",
+    "start": "tsx src/index.ts",
+    "prepack": "tsc"
+  },
+  "keywords": [
+    "testing",
+    "spec",
+    "tree",
+    "docker",
+    "state",
+    "cli",
+    "e2e"
+  ],
+  "author": "Shazhou Family",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://git.shazhou.work/shazhou/treespec.git"
+  },
+  "homepage": "https://git.shazhou.work/shazhou/treespec",
+  "files": [
+    "dist",
+    "help",
+    "bin"
+  ],
+  "dependencies": {
+    "dockerode": "^5.0.1",
+    "jsonata": "^2.2.2",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "@types/jsonata": "^1.5.1",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
 }
