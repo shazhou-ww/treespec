@@ -786,25 +786,26 @@ export async function runShow(args: string[]): Promise<number> {
 					? ` ${DIM}(${step.duration_ms}ms)${RESET}`
 					: '';
 
-			console.log(
-				`${stepPad}${mark} step ${step.index + 1}: ${step.command}  ${detail}${duration}`,
-			);
+		console.log(
+			`${stepPad}${mark} step ${step.index + 1}: ${step.command}  ${detail}${duration}`,
+		);
 
-			if (step.verdict === 'FAIL') {
-				console.log(`${stepPad}  ${RED}${step.reason}${RESET}`);
-			}
+		// Judge verdict + reason — always shown
+		const verdictColor = step.verdict === 'PASS' ? DIM : RED;
+		console.log(`${stepPad}  ${verdictColor}${step.verdict} — ${step.reason}${RESET}`);
 
-			if (verbose || step.verdict === 'FAIL') {
-				if (step.stdout) {
-					console.log(`${stepPad}  ${DIM}stdout:${RESET}`);
-					console.log(step.stdout);
-				}
-				if (step.stderr) {
-					console.log(`${stepPad}  ${DIM}stderr:${RESET}`);
-					console.log(step.stderr);
-				}
-			}
+		// stdout — always shown when present
+		if (step.stdout) {
+			console.log(`${stepPad}  ${DIM}stdout:${RESET}`);
+			console.log(step.stdout);
 		}
+		// stderr — always shown when present
+		if (step.stderr) {
+			console.log(`${stepPad}  ${DIM}stderr:${RESET}`);
+			console.log(step.stderr);
+		}
+		console.log();
+	}
 	}
 
 	// ── Summary ──────────────────────────────────────────────────
