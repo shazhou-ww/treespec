@@ -16,9 +16,9 @@ export interface ImageConfig {
 	 *   - exists + no --rebuild → skip build, use existing tag
 	 *   - exists + --rebuild    → rebuild
 	 *   - not exists             → build
-	 * Each project should specify its own unique tag to avoid collisions.
+	 * If omitted, defaults to `<name>-test:base` (requires `name` in config).
 	 */
-	tag: string;
+	tag?: string;
 	/** Optional Docker build args. */
 	args?: Record<string, string>;
 }
@@ -49,7 +49,14 @@ export interface LlmConfig {
 // ─── Project Config ─────────────────────────────────────────────
 
 export interface TreespecConfig {
-	/** Base image build configuration. Required. */
+	/**
+	 * Test suite name. Used for:
+	 *   - Trace filename prefix: `<name>-<timestamp>.jsonl`
+	 *   - Image tag default: `<name>-test:base` (when image.tag omitted)
+	 * If omitted, falls back to the directory name containing treespec.yaml.
+	 */
+	name?: string;
+	/** Base image build configuration. Optional (--image flag can be used instead). */
 	image: ImageConfig;
 	/**
 	 * Root directory of the test tree, relative to treespec.yaml.

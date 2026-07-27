@@ -207,9 +207,11 @@ assets/ directory:
 
 Trace output (JSONL, written to output path):
 
-  Default: .treespec-output/trace-<timestamp>.jsonl (non-overwriting)
-  --output <dir>      → <dir>/trace-<timestamp>.jsonl
+  Default: .treespec-output/<name>-<timestamp>.jsonl (non-overwriting)
+  --output <dir>       → <dir>/<name>-<timestamp>.jsonl
   --output file.jsonl  → file.jsonl (exact, no timestamp)
+
+  <name> comes from treespec.yaml name field, or directory basename if unset.
 
   Line types: meta | step | summary
   meta:   { type, started_at, total_nodes, base_image }

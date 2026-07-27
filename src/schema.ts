@@ -92,7 +92,7 @@ export const SpecSchema = z.object({
 
 const ImageConfigSchema = z.object({
 	dockerfile: z.string().min(1).optional(),
-	tag: z.string().min(1),
+	tag: z.string().min(1).optional(),
 	args: z.record(z.string()).optional(),
 });
 
@@ -103,6 +103,7 @@ const LlmConfigSchema = z.object({
 });
 
 export const TreespecConfigSchema = z.object({
+	name: z.string().min(1).optional(),
 	image: ImageConfigSchema.optional(),
 	specs: z.string().min(1),
 	llm: LlmConfigSchema.optional(),

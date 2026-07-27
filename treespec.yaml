@@ -1,3 +1,4 @@
+name: treespec
 image:
   dockerfile: tests/Dockerfile
   tag: treespec-fixture:base

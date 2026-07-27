@@ -133,6 +133,12 @@ export async function buildImage(
 			'image.dockerfile is required to build (or pass --image <tag> to use an existing image)',
 		);
 	}
+	if (!config.tag) {
+		throw new Error(
+			'image.tag is required to build (set name or image.tag in treespec.yaml)',
+		);
+	}
+	const tag = config.tag;
 	const dockerfile = config.dockerfile;
 	const dockerfilePath = join(contextDir, dockerfile);
 
@@ -169,7 +175,7 @@ export async function buildImage(
 				src,
 			},
 			{
-				t: config.tag,
+				t: tag,
 				dockerfile: dockerfile.replace(/\\/g, '/'),
 				buildargs: Object.keys(buildargs).length > 0 ? buildargs : undefined,
 			},
@@ -184,7 +190,7 @@ export async function buildImage(
 		throw formatDockerError(err);
 	}
 
-	return config.tag;
+	return tag;
 }
 
 /**

@@ -14,8 +14,9 @@ Minimal spec.yaml:
           - { path: "stdout", regex: "hello" }
 
 Project config (treespec.yaml):
+  name: myapp                     # test suite name (trace prefix, image tag default)
   image:
-    dockerfile: tests/Dockerfile
+    dockerfile: tests/Dockerfile  # omit tag → defaults to <name>-test:base
     tag: myapp-test:base
   specs: tests
 

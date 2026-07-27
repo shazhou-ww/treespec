@@ -4,7 +4,7 @@
 
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { LlmConfig } from './config.js';
 import {
@@ -90,6 +90,7 @@ async function loadProjectConfig(args: string[]): Promise<{
 	configPath: string;
 	configDir: string;
 	config: ReturnType<typeof parseConfig>;
+	suiteName: string;
 } | { error: string; code: number }> {
 	const configFlag = getFlagValue(args, '--config');
 	const configPath = resolve(process.cwd(), configFlag ?? 'treespec.yaml');
@@ -102,13 +103,23 @@ async function loadProjectConfig(args: string[]): Promise<{
 		return { error: `cannot read config file: ${configPath}`, code: 1 };
 	}
 
+	let config: ReturnType<typeof parseConfig>;
 	try {
-		const config = parseConfig(configYaml);
-		return { configPath, configDir, config };
+		config = parseConfig(configYaml);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		return { error: `invalid treespec.yaml: ${message}`, code: 1 };
 	}
+
+	// Resolve suite name: config.name → directory basename
+	const suiteName = config.name ?? basename(configDir);
+
+	// Resolve image tag default from suite name
+	if (config.image && !config.image.tag) {
+		config.image.tag = `${suiteName}-test:base`;
+	}
+
+	return { configPath, configDir, config, suiteName };
 }
 
 function colorStatus(status: NodeResult['status']): string {
@@ -341,17 +352,25 @@ async function resolveBaseImage(
 		};
 	}
 
-	const exists = await imageExists(config.image.tag);
+	const imageTag = config.image.tag;
+	if (!imageTag) {
+		return {
+			error: 'image.tag not resolved — set name or image.tag in treespec.yaml',
+			code: 1,
+		};
+	}
+
+	const exists = await imageExists(imageTag);
 
 	if (exists && !rebuild) {
-		console.log(`skipping build, tag exists: ${config.image.tag}`);
-		return { tag: config.image.tag };
+		console.log(`skipping build, tag exists: ${imageTag}`);
+		return { tag: imageTag };
 	}
 
 	if (exists && rebuild) {
-		console.log(`Rebuilding image: ${config.image.tag}`);
+		console.log(`Rebuilding image: ${imageTag}`);
 	} else {
-		console.log(`Building image: ${config.image.tag}`);
+		console.log(`Building image: ${imageTag}`);
 	}
 
 	const tag = await buildImage(config.image, configDir, printBuildProgress);
@@ -381,7 +400,7 @@ export async function runRun(args: string[]): Promise<number> {
 		return loaded.code;
 	}
 
-	const { configPath, configDir, config } = loaded;
+	const { configPath, configDir, config, suiteName } = loaded;
 	const keepTags = hasFlag(args, '--keep-tags');
 	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
 	const noTrace = hasFlag(args, '--no-trace');
@@ -491,7 +510,7 @@ export async function runRun(args: string[]): Promise<number> {
 		}
 
 		const writeTrace = !noTrace;
-		const trace = await createTraceWriter(outputDir, writeTrace);
+		const trace = await createTraceWriter(outputDir, writeTrace, suiteName);
 		if (writeTrace && trace.filePath) {
 			console.log(`Trace:  ${trace.filePath}`);
 			console.log();
@@ -611,9 +630,10 @@ export async function runInit(args: string[]): Promise<number> {
 	try {
 		await mkdir(exampleDir, { recursive: true });
 
-		const configYaml = `image:
+		const configYaml = `name: ${target.split('/').pop() || 'myapp'}
+image:
   dockerfile: tests/Dockerfile
-  tag: myapp-test:base
+  tag: ${target.split('/').pop() || 'myapp'}-test:base
 
 specs: tests
 `;

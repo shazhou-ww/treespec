@@ -158,13 +158,15 @@ class FileTraceWriter implements TraceWriter {
 }
 
 /**
- * Generate a timestamped trace filename: trace-YYYYMMDD-HHMMSS.jsonl
+ * Generate a timestamped trace filename.
+ * Prefix defaults to "trace" when no suite name is provided.
  */
-function timestampedTraceFilename(): string {
+function timestampedTraceFilename(suiteName?: string): string {
 	const d = new Date();
 	const pad = (n: number) => String(n).padStart(2, '0');
 	const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-	return `trace-${ts}.jsonl`;
+	const prefix = suiteName ?? 'trace';
+	return `${prefix}-${ts}.jsonl`;
 }
 
 /**
@@ -172,13 +174,15 @@ function timestampedTraceFilename(): string {
  *
  * `outputPath` can be:
  *   - A file path (ending in .jsonl) → used directly
- *   - A directory path → file written inside as trace-<timestamp>.jsonl
+ *   - A directory path → file written inside as <suiteName>-<timestamp>.jsonl
  *
- * Trace file: `<outputPath>` or `<outputPath>/trace-<timestamp>.jsonl`
+ * `suiteName` is used as the filename prefix in directory mode.
+ * Trace file: `<outputPath>` or `<outputPath>/<suiteName>-<timestamp>.jsonl`
  */
 export async function createTraceWriter(
 	outputPath: string,
 	writeTrace: boolean,
+	suiteName?: string,
 ): Promise<TraceWriter> {
 	if (!writeTrace) {
 		return new NullTraceWriter(outputPath);
@@ -194,7 +198,7 @@ export async function createTraceWriter(
 	} else {
 		// Directory — generate timestamped filename inside
 		outputDir = outputPath;
-		filePath = join(outputDir, timestampedTraceFilename());
+		filePath = join(outputDir, timestampedTraceFilename(suiteName));
 	}
 
 	await mkdir(outputDir, { recursive: true });
