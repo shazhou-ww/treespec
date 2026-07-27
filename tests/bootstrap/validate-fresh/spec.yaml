@@ -1,0 +1,9 @@
+description: "validate the freshly initialized project"
+steps:
+  - type: exec
+    command: "treespec validate --config /tmp/bootstrap-project/treespec.yaml 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Valid" }
+        - { path: "exit_code", regex: "^0$" }

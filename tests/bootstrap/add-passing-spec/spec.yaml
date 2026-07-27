@@ -1,0 +1,8 @@
+description: "add a correctly configured passing spec"
+steps:
+  - type: exec
+    command: "mkdir -p /tmp/bootstrap-project/tests/echo-hello && cat > /tmp/bootstrap-project/tests/echo-hello/spec.yaml << 'SPEC'\ndescription: \"echo hello\"\nsteps:\n  - type: exec\n    command: \"echo hello\"\n    assert:\n      type: regex\n      conditions:\n        - { path: \"stdout\", regex: \"hello\" }\nSPEC"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }

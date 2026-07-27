@@ -1,7 +1,7 @@
-description: "validates a well-formed config and spec tree"
+description: "validate after adding a correct spec"
 steps:
   - type: exec
-    command: "treespec validate --config assets/validate-fixture/treespec.yaml 2>&1"
+    command: "treespec validate --config /tmp/bootstrap-project/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:

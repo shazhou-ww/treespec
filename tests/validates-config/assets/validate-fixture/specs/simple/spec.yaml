@@ -1,8 +1,0 @@
-description: "simple valid spec"
-steps:
-  - type: exec
-    command: "echo ok"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "ok" }

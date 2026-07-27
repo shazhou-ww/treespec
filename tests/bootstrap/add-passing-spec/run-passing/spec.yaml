@@ -1,0 +1,10 @@
+description: "run the project and expect all specs to pass"
+steps:
+  - type: exec
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml --no-mount --no-trace --rebuild 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "2 passed" }
+        - { path: "stdout", regex: "0 failed" }
+        - { path: "exit_code", regex: "^0$" }
