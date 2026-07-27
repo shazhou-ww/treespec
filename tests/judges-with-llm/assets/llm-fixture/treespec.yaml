@@ -1,5 +1,1 @@
 specs: specs
-llm:
-  base_url: "https://api.siliconflow.cn/v1"
-  model: "deepseek-ai/DeepSeek-V3"
-  api_key_env: "SILICONFLOW_API_KEY"

@@ -129,7 +129,7 @@ export async function evaluateAssertion(
 
 	if (assertion.type === 'llm') {
 		if (!ctx?.llmConfig) {
-			throw new Error('LLM assertion requires llm config in treespec.yaml');
+			throw new Error('LLM assertion requires TREESPEC_LLM_* env vars');
 		}
 		try {
 			const messages = assembleJudgeMessages(

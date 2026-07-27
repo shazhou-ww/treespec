@@ -39,6 +39,11 @@ Common flags:
   --keep-tags          Keep ephemeral tags after run (debug)
   --rebuild            Force rebuild base image
 
+LLM assertions (type: llm):
+  Set TREESPEC_LLM_BASE_URL, TREESPEC_LLM_MODEL, TREESPEC_LLM_API_KEY
+  env vars. Missing → specs with llm asserts auto-skip.
+  Put them in .env (treespec.yaml's sibling) or export in shell.
+
 Test tree design principles:
 
   1. Organize by lifecycle, not by feature.

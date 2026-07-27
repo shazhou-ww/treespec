@@ -1,6 +1,6 @@
 description: "judges command output with LLM"
 env:
-  - SILICONFLOW_API_KEY
+  - TREESPEC_LLM_API_KEY
 steps:
   - type: exec
     command: "treespec run --config assets/llm-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"

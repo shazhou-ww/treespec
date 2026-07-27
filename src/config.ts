@@ -28,22 +28,15 @@ export interface ImageConfig {
 //   2. image.dockerfile    → build from Dockerfile
 //   3. Neither              → error
 
-// ─── LLM Config ─────────────────────────────────────────────────
+// ─── LLM Config (resolved from env vars, not in treespec.yaml) ──
 
 export interface LlmConfig {
-	/**
-	 * OpenAI-compatible API endpoint.
-	 * Example: 'https://api.openai.com/v1'
-	 */
+	/** OpenAI-compatible API endpoint. */
 	base_url: string;
-	/** Model name. Example: 'gpt-4o'. */
+	/** Model name. */
 	model: string;
-	/**
-	 * Name of the environment variable that holds the API key.
-	 * The key itself is never written to YAML — only the env var name.
-	 * Example: 'OPENAI_API_KEY' → treespec reads $OPENAI_API_KEY at runtime.
-	 */
-	api_key_env: string;
+	/** API key (resolved value, not env var name). */
+	api_key: string;
 }
 
 // ─── Project Config ─────────────────────────────────────────────
@@ -64,15 +57,9 @@ export interface TreespecConfig {
 	 * The directory hierarchy = test tree structure.
 	 */
 	specs: string;
-	/**
-	 * LLM configuration for 'llm' assertion type.
-	 * Required only if any test case uses `assert: { type: 'llm' }`.
-	 */
-	llm?: LlmConfig;
-	/**
-	 * Output directory for test results and logs.
-	 * Default: '.treespec-output'
-	 */
+	/** Required only if any test case uses `assert: { type: 'llm' }`.
+	 * LLM config is read from env vars: TREESPEC_LLM_BASE_URL,
+	 * TREESPEC_LLM_MODEL, TREESPEC_LLM_API_KEY. */
 	output?: string;
 }
 

@@ -19,8 +19,6 @@ Options:
   --no-mount            Specs already in image (skip bind mount, for DinD)
   --keep-tags           Keep ephemeral image tags after run
   --verbose, -v         Show full step output in terminal
-  --llm-base-url <url> Override LLM API endpoint
-  --llm-model <model>  Override LLM model name
   -h, --help            Show this help
 
 ═══════════════════════════════════════════════════════════════
@@ -114,7 +112,7 @@ Assertion types:
     assert:
       type: llm
       prompt: "Does the output contain the word hello?"
-    Requires llm config in treespec.yaml (base_url, model, api_key_env).
+    Requires TREESPEC_LLM_BASE_URL, TREESPEC_LLM_MODEL, TREESPEC_LLM_API_KEY env vars.
     LLM receives: test description + step history + current step output + prompt.
     Returns VERDICT: PASS or VERDICT: FAIL + REASON: <explanation>.
     temperature=0, max_tokens=256.

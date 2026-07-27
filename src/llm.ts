@@ -51,10 +51,9 @@ export async function callLlmApi(
 	messages: LLMMessage[],
 	config: LlmConfig,
 ): Promise<string> {
-	const envName = config.api_key_env;
-	const apiKey = process.env[envName];
+	const apiKey = config.api_key;
 	if (!apiKey) {
-		throw new Error(`LLM API key env var not set: ${envName}`);
+		throw new Error('LLM API key not configured (TREESPEC_LLM_API_KEY)');
 	}
 
 	const baseUrl = config.base_url.replace(/\/+$/, '');

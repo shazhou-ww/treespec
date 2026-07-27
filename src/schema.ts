@@ -96,17 +96,10 @@ const ImageConfigSchema = z.object({
 	args: z.record(z.string()).optional(),
 });
 
-const LlmConfigSchema = z.object({
-	base_url: z.string().min(1),
-	model: z.string().min(1),
-	api_key_env: z.string().min(1),
-});
-
 export const TreespecConfigSchema = z.object({
 	name: z.string().min(1).optional(),
 	image: ImageConfigSchema.optional(),
 	specs: z.string().min(1),
-	llm: LlmConfigSchema.optional(),
 	output: z.string().min(1).optional(),
 });
 

@@ -76,8 +76,6 @@ function getPositionalArgs(args: string[]): string[] {
 		'--env-file',
 		'--image',
 		'--output',
-	'--llm-base-url',
-	'--llm-model',
 	'--name',
 ]);
 	const result: string[] = [];
@@ -219,32 +217,12 @@ function resolveTargetPaths(
 	return { paths: [...resolved] };
 }
 
-function resolveLlmConfig(
-	config: ReturnType<typeof parseConfig>,
-	args: string[],
-): LlmConfig | undefined {
-	const baseUrl = getFlagValue(args, '--llm-base-url');
-	const model = getFlagValue(args, '--llm-model');
-	if (!config.llm && !baseUrl && !model) {
-		return undefined;
-	}
-	if (!config.llm && (baseUrl || model)) {
-		if (!baseUrl || !model) {
-			throw new Error(
-				'LLM override requires both --llm-base-url and --llm-model when treespec.yaml has no llm section',
-			);
-		}
-		return {
-			base_url: baseUrl,
-			model,
-			api_key_env: 'OPENAI_API_KEY',
-		};
-	}
-	return {
-		base_url: baseUrl ?? config.llm!.base_url,
-		model: model ?? config.llm!.model,
-		api_key_env: config.llm!.api_key_env,
-	};
+function resolveLlmConfig(): LlmConfig | undefined {
+	const baseUrl = process.env.TREESPEC_LLM_BASE_URL;
+	const model = process.env.TREESPEC_LLM_MODEL;
+	const apiKey = process.env.TREESPEC_LLM_API_KEY;
+	if (!baseUrl || !model || !apiKey) return undefined;
+	return { base_url: baseUrl, model, api_key: apiKey };
 }
 
 export async function runValidate(args: string[]): Promise<number> {
@@ -265,8 +243,9 @@ export async function runValidate(args: string[]): Promise<number> {
 		`Image:  ${config.image?.tag ?? '(none)'}` +
 			(config.image?.dockerfile ? ` (dockerfile: ${config.image.dockerfile})` : ' (no dockerfile)'),
 	);
-	if (config.llm) {
-		console.log(`LLM:    ${config.llm.model} @ ${config.llm.base_url}`);
+	const llm = resolveLlmConfig();
+	if (llm) {
+		console.log(`LLM:    ${llm.model} @ ${llm.base_url}`);
 	}
 	console.log(`Output: ${config.output ?? '.treespec-output'}`);
 	console.log();
@@ -434,7 +413,7 @@ export async function runRun(args: string[]): Promise<number> {
 
 	let llm: LlmConfig | undefined;
 	try {
-		llm = resolveLlmConfig(config, args);
+		llm = resolveLlmConfig();
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		console.error(`Error: ${message}`);
@@ -647,10 +626,6 @@ image:
 specs: tests
 
 # output: .treespec-output           # default: .treespec-output
-# llm:                               # optional — needed only for llm assertions
-#   base_url: https://api.example.com/v1
-#   model: gpt-4o
-#   api_key_env: OPENAI_API_KEY
 `;
 
 		const dockerfile = `FROM node:22-alpine

@@ -1,6 +1,4 @@
 description: "LLM judges command output"
-env:
-  - SILICONFLOW_API_KEY
 steps:
   - type: exec
     command: "echo hello world"
