@@ -3,13 +3,16 @@
 	"version": "0.0.1",
 	"description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
 	"type": "module",
-	"main": "src/index.ts",
+	"main": "dist/index.js",
 	"bin": {
 		"treespec": "bin/treespec.js"
 	},
 	"scripts": {
+		"build": "tsc",
+		"dev": "tsx src/index.ts",
 		"validate": "tsx src/index.ts validate",
-		"start": "tsx src/index.ts"
+		"start": "tsx src/index.ts",
+		"prepack": "tsc"
 	},
 	"keywords": [
 		"testing",
@@ -27,6 +30,11 @@
 		"url": "https://git.shazhou.work/shazhou/treespec.git"
 	},
 	"homepage": "https://git.shazhou.work/shazhou/treespec",
+	"files": [
+		"dist",
+		"help",
+		"bin"
+	],
 	"dependencies": {
 		"dockerode": "^5.0.1",
 		"jsonata": "^2.2.2",

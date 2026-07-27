@@ -5,14 +5,16 @@ WORKDIR /app
 # Copy package files first for layer caching
 COPY package.json package-lock.json* ./
 
-# Install dependencies + tsx globally (for bin/treespec.js wrapper)
+# Install dependencies (includes devDeps for tsc build)
 RUN npm ci 2>/dev/null || npm install
-RUN npm install -g tsx
 
 # Copy source code
 COPY . .
 
-# Link source code
+# Build TypeScript → dist/
+RUN npx tsc
+
+# Link the CLI globally
 RUN npm link
 
 # Create /specs symlink so --no-mount (DinD) can access tests via /specs path
