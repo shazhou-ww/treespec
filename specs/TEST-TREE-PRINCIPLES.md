@@ -175,4 +175,16 @@ bootstrap/                  ← init project
 | 3. 状态依赖决定层级 | B 需要 A → B 是 A 的子节点 | 每个节点是否消费父状态并为子创造状态？ |
 | 4. 隔离错误 | broken case 在独立子树 | 错误 case 是否不污染主流程？ |
 
+## 补充：clean 不能在树内部
+
+`treespec clean` 删除所有 `treespec/ephemeral:*` 镜像。如果在树遍历过程中执行，会删掉树自己还在用的 commit chain tag，导致后续兄弟节点找不到父镜像而报错。
+
+`clean` 必须是**自包含的顶层节点**：自己 init→run(parent-child, --keep-tags)→clean。注意叶子节点（无子节点、无 postcon）不会触发 `commitContainer`，所以必须用有子节点的 spec 来确保 ephemeral tag 被创建。
+
+## 补充：commit 只在有继承者时触发
+
+`treespec run` 对每个节点执行步骤后，只在 `hasChildren || hasPostcon` 时才 `commitContainer`。叶子节点不 commit——没有继承者就不浪费一次 docker commit。这是 treespec 的资源优化策略，但也意味着测试 `--keep-tags` 和 `clean` 时必须用有子节点的 spec。
+
+---
+
 **一句话**：treespec 的差异化价值不在"能跑测试"，而在"状态沿着树传递"。编排原则就是让这个传递链最大限度地被利用——没有浪费的重复 setup，没有遗漏的状态依赖。
