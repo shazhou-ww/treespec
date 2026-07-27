@@ -647,6 +647,160 @@ steps:
 	}
 }
 
+export async function runShow(args: string[]): Promise<number> {
+	const positionals = getPositionalArgs(args);
+	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
+	const failuresOnly = hasFlag(args, '--failures') || hasFlag(args, '-f');
+
+	const tracePath = positionals[0];
+	if (!tracePath) {
+		console.error('Error: treespec show requires a trace file path');
+		console.error('Usage: treespec show <trace.jsonl> [options]');
+		return 1;
+	}
+
+	const absPath = resolve(process.cwd(), tracePath);
+	let content: string;
+	try {
+		content = await readFile(absPath, 'utf8');
+	} catch {
+		console.error(`Error: cannot read trace file: ${absPath}`);
+		return 1;
+	}
+
+	const lines = content.split('\n').filter((l) => l.trim());
+	const records: Array<Record<string, unknown>> = [];
+	for (const line of lines) {
+		try {
+			records.push(JSON.parse(line));
+		} catch {
+			// skip malformed lines
+		}
+	}
+
+	const meta = records.find((r) => r.type === 'meta');
+	const summary = records.find((r) => r.type === 'summary');
+	const steps = records.filter((r) => r.type === 'step') as Array<
+		Record<string, unknown> & {
+			node_path: string;
+			index: number;
+			command: string;
+			stdout: string;
+			stderr: string;
+			exit_code: number;
+			verdict: string;
+			reason: string;
+			duration_ms: number;
+		}
+	>;
+
+	if (steps.length === 0 && !meta) {
+		console.error('Error: no valid trace records found');
+		return 1;
+	}
+
+	// ── Meta ──────────────────────────────────────────────────────
+	if (meta) {
+		console.log(`${BOLD}Trace${RESET}: ${meta.name ?? '(unnamed)'}`);
+		console.log(`Started: ${meta.started_at ?? '?'}`);
+		console.log(`Nodes:   ${meta.total_nodes ?? '?'}`);
+		if (meta.base_image) console.log(`Image:   ${meta.base_image}`);
+		console.log();
+	}
+
+	// ── Group steps by node_path ──────────────────────────────────
+	const nodeMap = new Map<string, typeof steps>();
+	for (const step of steps) {
+		const path = step.node_path ?? '(unknown)';
+		if (!nodeMap.has(path)) nodeMap.set(path, []);
+		nodeMap.get(path)!.push(step);
+	}
+
+	// Sort nodes in DFS order (alphabetical on path segments = DFS for trees)
+	const sortedPaths = [...nodeMap.keys()].sort();
+
+	for (const nodePath of sortedPaths) {
+		const stepList = nodeMap.get(nodePath)!;
+		const failCount = stepList.filter((s) => s.verdict === 'FAIL').length;
+		const passCount = stepList.filter((s) => s.verdict === 'PASS').length;
+		const nodeVerdict = failCount > 0 ? 'FAIL' : 'PASS';
+
+		if (failuresOnly && nodeVerdict !== 'FAIL') continue;
+
+		// Depth from path segments
+		const depth = nodePath === '.' ? 0 : (nodePath.match(/\//g)?.length ?? 0);
+		const pad = '  '.repeat(depth);
+		const statusStr =
+			nodeVerdict === 'PASS'
+				? `${GREEN}${BOLD}PASS${RESET}`
+				: `${RED}${BOLD}FAIL${RESET}`;
+		const reason =
+			failCount > 0
+				? `${failCount} step${failCount === 1 ? '' : 's'} failed`
+				: `${passCount} step${passCount === 1 ? '' : 's'} passed`;
+
+		console.log(
+			`${pad}${CYAN}▶${RESET} ${BOLD}${nodePath}${RESET}  ${statusStr}  ${DIM}${reason}${RESET}`,
+		);
+
+		// Steps
+		for (const step of stepList) {
+			if (failuresOnly && step.verdict !== 'FAIL') continue;
+
+			const stepPad = '  '.repeat(depth + 1);
+			const mark =
+				step.verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+			const detail = `${DIM}exit ${step.exit_code}${RESET}`;
+			const duration =
+				step.duration_ms !== undefined
+					? ` ${DIM}(${step.duration_ms}ms)${RESET}`
+					: '';
+
+			console.log(
+				`${stepPad}${mark} step ${step.index + 1}: ${step.command}  ${detail}${duration}`,
+			);
+
+			if (step.verdict === 'FAIL') {
+				console.log(`${stepPad}  ${RED}${step.reason}${RESET}`);
+			}
+
+			if (verbose || step.verdict === 'FAIL') {
+				if (step.stdout) {
+					console.log(`${stepPad}  ${DIM}stdout:${RESET}`);
+					console.log(step.stdout);
+				}
+				if (step.stderr) {
+					console.log(`${stepPad}  ${DIM}stderr:${RESET}`);
+					console.log(step.stderr);
+				}
+			}
+		}
+	}
+
+	// ── Summary ──────────────────────────────────────────────────
+	if (summary) {
+		console.log();
+		const duration =
+			summary.duration_ms !== undefined
+				? ` ${DIM}(${summary.duration_ms}ms)${RESET}`
+				: '';
+		console.log(
+			`${BOLD}Summary${RESET}: ${summary.total ?? '?'} total, ` +
+				`${GREEN}${summary.passed ?? 0} passed${RESET}, ` +
+				`${RED}${summary.failed ?? 0} failed${RESET}, ` +
+				`${YELLOW}${summary.skipped ?? 0} skipped${RESET}${duration}`,
+		);
+		if (summary.ended_at) {
+			console.log(`${DIM}Ended: ${summary.ended_at}${RESET}`);
+		}
+	}
+
+	if (summary && ((summary.failed as number) > 0 || (summary.skipped as number) > 0)) {
+		return 1;
+	}
+	return 0;
+}
+
 export async function runClean(_args: string[]): Promise<number> {
 	try {
 		const removed = await cleanEphemeralTags();
@@ -718,6 +872,15 @@ export async function runCli(argv: string[]): Promise<number> {
 			return 0;
 		}
 		return runClean(subArgs);
+	}
+
+	if (command === 'show') {
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('show'));
+			return 0;
+		}
+		return runShow(subArgs);
 	}
 
 	console.error(`Unknown command: ${command}`);

@@ -21,6 +21,7 @@ Project config (treespec.yaml):
 
 Commands:
   treespec run [paths...] [options]   DFS-execute the test tree (or subtrees)
+  treespec show <trace.jsonl>         Replay a trace as human-readable output
   treespec validate [--config <path>] Check config + spec tree for errors
   treespec tree [--config <path>]     Visualize the test tree structure
   treespec init <path>                Create a project scaffold
@@ -38,6 +39,7 @@ Common flags:
 
 For details:
   treespec run --help       — spec format, assert types, wait, postcon, examples
+  treespec show --help      — trace format, field reference, jq queries
   treespec validate --help  — validation rules, common errors
   treespec tree --help      — tree output format
   treespec init --help      — scaffold structure

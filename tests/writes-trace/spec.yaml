@@ -21,3 +21,12 @@ steps:
       conditions:
         - { path: "stdout", regex: "meta" }
         - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec show /tmp/trace-test-out/trace.jsonl 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Summary" }
+        - { path: "stdout", regex: "PASS" }
+        - { path: "stdout", regex: "echo-hello" }
+        - { path: "exit_code", regex: "^0$" }
