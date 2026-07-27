@@ -40,26 +40,26 @@ Common flags:
   --rebuild            Force rebuild base image
 
 Test tree design principles:
-  Organize by lifecycle, not by feature.
-    init → validate → add cases → run → observe (trace, tree)
-    NOT: group by "http tests", "exec tests", "trace tests"
 
-  Step types are orthogonal to the workflow.
-    exec and http are parallel variants under passing/failing —
-    they are step types, not test categories.
+  1. Organize by lifecycle, not by feature.
+     init → validate → add cases → run → observe (trace, tree)
+     Step types (exec, http), pass/fail variants — these are orthogonal
+     to the lifecycle. They are parallel variants within a stage,
+     not separate test categories.
+     DON'T group by "http tests", "exec tests", "trace tests".
 
-  Observation follows action.
-    show-tree after cases exist; show-trace after a run happened.
-    A node that observes state should be a child of the node that creates it.
+  2. Observation follows action.
+     show-tree after cases exist; show-trace after a run happened.
+     A node that observes state should be a child of the node that creates it.
 
-  State dependency drives hierarchy.
-    If B needs A's state, B is a child of A.
-    Siblings are independent — each starts from parent's committed state.
-    This minimizes repeated precondition setup.
+  3. State dependency drives hierarchy.
+     If B needs A's state, B is a child of A.
+     Siblings are independent — each starts from parent's committed state.
+     This minimizes repeated precondition setup.
 
-  Isolate broken/error cases.
-    Put invalid specs in a separate subtree so they don't pollute
-    the main validation flow.
+  4. Isolate broken/error cases.
+     Put invalid specs in a separate subtree so they don't pollute
+     the main validation flow.
 
 Example (self-test bootstrap tree):
   bootstrap/
