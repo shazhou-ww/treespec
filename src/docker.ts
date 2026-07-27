@@ -3,6 +3,7 @@
  */
 
 import { access, readdir, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import Docker from 'dockerode';
 import type { ImageConfig } from './config.js';
@@ -219,12 +220,15 @@ export async function pullImageIfMissing(tag: string): Promise<void> {
 const EPHEMERAL_REPO = 'treespec/ephemeral';
 
 /**
- * Build an ephemeral image tag from a node path relative to the specs root.
- * e.g. `provider-add/model-add` → `treespec/ephemeral:provider-add-model-add`
+ * Build an ephemeral image tag from a node path.
+ * Uses the last path segment + 8-char hash for uniqueness.
+ * e.g. `provider-add/model-add` → `treespec/ephemeral:model-add-a1b2c3d4`
  */
 export function ephemeralTagForPath(nodePath: string): string {
-	const tag = nodePath.replace(/^\/+|\/+$/g, '').replace(/\//g, '-');
-	return `${EPHEMERAL_REPO}:${tag}`;
+	const clean = nodePath.replace(/^\/+|\/+$/g, '');
+	const lastSegment = clean.split('/').pop() || 'root';
+	const hash = createHash('sha256').update(clean).digest('hex').slice(0, 8);
+	return `${EPHEMERAL_REPO}:${lastSegment}-${hash}`;
 }
 
 /**
