@@ -794,15 +794,26 @@ export async function runShow(args: string[]): Promise<number> {
 		const verdictColor = step.verdict === 'PASS' ? DIM : RED;
 		console.log(`${stepPad}  ${verdictColor}${step.verdict} — ${step.reason}${RESET}`);
 
-		// stdout — always shown when present
+		// stdout — always shown when present, ANSI stripped, indented
+		const outIndent = stepPad + '    ';
 		if (step.stdout) {
 			console.log(`${stepPad}  ${DIM}stdout:${RESET}`);
-			console.log(step.stdout);
+			const clean = step.stdout.replace(/\x1b\[[0-9;]*m/g, '').trimEnd();
+			if (clean) {
+				for (const line of clean.split('\n')) {
+					console.log(line ? outIndent + line : '');
+				}
+			}
 		}
 		// stderr — always shown when present
 		if (step.stderr) {
 			console.log(`${stepPad}  ${DIM}stderr:${RESET}`);
-			console.log(step.stderr);
+			const clean = step.stderr.replace(/\x1b\[[0-9;]*m/g, '').trimEnd();
+			if (clean) {
+				for (const line of clean.split('\n')) {
+					console.log(line ? outIndent + line : '');
+				}
+			}
 		}
 		console.log();
 	}
