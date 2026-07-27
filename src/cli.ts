@@ -71,9 +71,10 @@ function getPositionalArgs(args: string[]): string[] {
 		'--env-file',
 		'--image',
 		'--output',
-		'--llm-base-url',
-		'--llm-model',
-	]);
+	'--llm-base-url',
+	'--llm-model',
+	'--name',
+]);
 	const result: string[] = [];
 	for (let i = 0; i < args.length; i++) {
 		const a = args[i]!;
@@ -610,14 +611,16 @@ export async function runInit(args: string[]): Promise<number> {
 	const target = positionals[0];
 	if (!target) {
 		console.error('Error: treespec init requires a path');
-		console.error('Usage: treespec init <path>');
+		console.error('Usage: treespec init <path> [--name <name>]');
 		return 1;
 	}
 
+	const nameFlag = getFlagValue(args, '--name');
 	const root = resolve(process.cwd(), target);
 	const testsDir = join(root, 'tests');
 	const exampleDir = join(testsDir, 'example');
 	const configPath = join(root, 'treespec.yaml');
+	const projectName = nameFlag ?? (target.split('/').pop() || 'myapp');
 
 	try {
 		await access(configPath);
@@ -630,10 +633,10 @@ export async function runInit(args: string[]): Promise<number> {
 	try {
 		await mkdir(exampleDir, { recursive: true });
 
-		const configYaml = `name: ${target.split('/').pop() || 'myapp'}
+		const configYaml = `name: ${projectName}
 image:
   dockerfile: tests/Dockerfile
-  tag: ${target.split('/').pop() || 'myapp'}-test:base
+  tag: ${projectName}-test:base
 
 specs: tests
 `;

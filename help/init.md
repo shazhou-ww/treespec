@@ -1,6 +1,10 @@
 treespec init — create a project scaffold
 
-Usage: treespec init <path>
+Usage: treespec init <path> [--name <name>]
+
+Options:
+  --name <name>   Override test suite name (default: directory name from path)
+  -h, --help      Show this help
 
 Creates:
   <path>/
@@ -10,7 +14,7 @@ Creates:
       example/
         spec.yaml              # example: exec + regex assert
 
-The name field is derived from the path's directory name.
+The name field defaults to the path's directory name, or use --name to override.
 Image tag defaults to <name>-test:base (can be overridden).
 The scaffold is ready to run with `treespec run` after customizing the Dockerfile.
 Non-interactive — just creates files. Fails if treespec.yaml already exists.
