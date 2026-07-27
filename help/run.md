@@ -12,7 +12,9 @@ Options:
   --image <tag>         Use existing image as base (skip build)
   --rebuild             Force rebuild (requires image.dockerfile in config)
   --env-file <path>     Override .env path
-  --output <dir>        Override output directory (default: .treespec-output)
+  --output <path>       Override output path (dir or .jsonl file)
+                         Dir: trace-<timestamp>.jsonl inside
+                         File: used directly (no timestamp)
   --no-trace            Skip writing trace JSONL
   --no-mount            Specs already in image (skip bind mount, for DinD)
   --keep-tags           Keep ephemeral image tags after run
@@ -203,14 +205,18 @@ assets/ directory:
 
 ═══════════════════════════════════════════════════════════════
 
-Trace output (JSONL, written to output dir):
+Trace output (JSONL, written to output path):
+
+  Default: .treespec-output/trace-<timestamp>.jsonl (non-overwriting)
+  --output <dir>      → <dir>/trace-<timestamp>.jsonl
+  --output file.jsonl  → file.jsonl (exact, no timestamp)
 
   Line types: meta | step | summary
   meta:   { type, started_at, total_nodes, base_image }
   step:   { type, node_path, step_index, command, stdout, stderr, exit_code, verdict, reason, duration_ms }
   summary: { type, total, passed, failed, skipped, duration_ms, ended_at }
 
-  Use --no-trace to skip. Use --output <dir> to override location.
+  Use --no-trace to skip. Use --output <path> to override location.
 
 ═══════════════════════════════════════════════════════════════
 

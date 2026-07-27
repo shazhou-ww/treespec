@@ -8,7 +8,7 @@ steps:
         - { path: "stdout", regex: "1 passed" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "treespec run --config assets/trace-fixture/treespec.yaml --image treespec-fixture:base --no-mount --keep-tags --output /tmp/trace-test-out 2>&1"
+    command: "treespec run --config assets/trace-fixture/treespec.yaml --image treespec-fixture:base --no-mount --keep-tags --output /tmp/trace-test-out/trace.jsonl 2>&1"
     assert:
       type: regex
       conditions:

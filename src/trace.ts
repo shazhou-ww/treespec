@@ -8,7 +8,7 @@
  */
 
 import { mkdir, writeFile, appendFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 export type TraceMeta = {
 	type: 'meta';
@@ -158,18 +158,46 @@ class FileTraceWriter implements TraceWriter {
 }
 
 /**
+ * Generate a timestamped trace filename: trace-YYYYMMDD-HHMMSS.jsonl
+ */
+function timestampedTraceFilename(): string {
+	const d = new Date();
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+	return `trace-${ts}.jsonl`;
+}
+
+/**
  * Create a trace writer. When `writeTrace` is false, returns a no-op writer.
- * Trace file: `<outputDir>/trace.jsonl`
+ *
+ * `outputPath` can be:
+ *   - A file path (ending in .jsonl) → used directly
+ *   - A directory path → file written inside as trace-<timestamp>.jsonl
+ *
+ * Trace file: `<outputPath>` or `<outputPath>/trace-<timestamp>.jsonl`
  */
 export async function createTraceWriter(
-	outputDir: string,
+	outputPath: string,
 	writeTrace: boolean,
 ): Promise<TraceWriter> {
 	if (!writeTrace) {
-		return new NullTraceWriter(outputDir);
+		return new NullTraceWriter(outputPath);
 	}
+
+	let filePath: string;
+	let outputDir: string;
+
+	if (outputPath.endsWith('.jsonl')) {
+		// User specified a file path — use it directly
+		filePath = outputPath;
+		outputDir = dirname(outputPath);
+	} else {
+		// Directory — generate timestamped filename inside
+		outputDir = outputPath;
+		filePath = join(outputDir, timestampedTraceFilename());
+	}
+
 	await mkdir(outputDir, { recursive: true });
-	const filePath = join(outputDir, 'trace.jsonl');
 	await writeFile(filePath, '', 'utf8');
 	return new FileTraceWriter(outputDir, filePath);
 }

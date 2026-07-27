@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 bun.lock
 package-lock.json
+*.swp

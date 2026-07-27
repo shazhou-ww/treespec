@@ -31,6 +31,7 @@ Commands:
 Common flags:
   --image <tag>        Use existing image (skip build)
   --config <path>      Override treespec.yaml path
+  --output <path>      Output path (dir → timestamped, .jsonl → exact file)
   --no-trace           Skip trace JSONL output
   --verbose, -v        Show full step output
   --no-mount           Specs in image (skip bind mount, for DinD)
