@@ -4,7 +4,7 @@ steps:
     command: |
       mkdir -p /tmp/bootstrap-project/tests/echo-hello
       cat > /tmp/bootstrap-project/tests/echo-hello/spec.yaml << 'SPEC'
-      description: "exec passing — echo hello"
+      description: "exec passing"
       steps:
         - type: exec
           command: "echo hello"
@@ -21,7 +21,7 @@ steps:
     command: |
       mkdir -p /tmp/bootstrap-project/tests/fail-case
       cat > /tmp/bootstrap-project/tests/fail-case/spec.yaml << 'SPEC'
-      description: "exec failing — exit 1"
+      description: "exec failing"
       steps:
         - type: exec
           command: "exit 1"
@@ -38,7 +38,7 @@ steps:
     command: |
       mkdir -p /tmp/bootstrap-project/tests/http-get
       cat > /tmp/bootstrap-project/tests/http-get/spec.yaml << 'SPEC'
-      description: "http passing — GET with regex assert"
+      description: "http passing"
       steps:
         - type: http
           request:
@@ -57,7 +57,7 @@ steps:
     command: |
       mkdir -p /tmp/bootstrap-project/tests/http-fail
       cat > /tmp/bootstrap-project/tests/http-fail/spec.yaml << 'SPEC'
-      description: "http failing — assert wrong status"
+      description: "http failing"
       steps:
         - type: http
           request:

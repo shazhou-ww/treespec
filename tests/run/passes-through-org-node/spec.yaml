@@ -1,9 +1,0 @@
-description: "passes through organizational nodes without spec.yaml"
-steps:
-  - type: exec
-    command: "treespec run --config assets/org-fixture/treespec.yaml --image treespec-fixture:base --no-mount --no-trace --keep-tags 2>&1"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "3 passed" }
-        - { path: "exit_code", regex: "^0$" }

@@ -1,0 +1,10 @@
+description: "run pruning fixture — expect 1 failed, 1 skipped"
+steps:
+  - type: exec
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml prune-parent --no-mount --no-trace --rebuild 2>&1; true"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "1 failed" }
+        - { path: "stdout", regex: "1 skipped" }
+        - { path: "exit_code", regex: "^0$" }

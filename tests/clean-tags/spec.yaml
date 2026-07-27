@@ -1,0 +1,56 @@
+description: "init project, run parent-child with --keep-tags, then clean removes tags"
+steps:
+  - type: exec
+    command: "rm -rf /tmp/clean-test && treespec init /tmp/clean-test --name clean-test 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Created treespec project" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "printf 'FROM node:22-alpine\\nCOPY . /tmp/clean-test\\n' > /tmp/clean-test/tests/Dockerfile"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: |
+      mkdir -p /tmp/clean-test/tests/parent/child
+      cat > /tmp/clean-test/tests/parent/spec.yaml << 'SPEC'
+      description: "parent writes state"
+      steps:
+        - type: exec
+          command: "echo parent-data > /tmp/clean-state"
+          assert:
+            type: regex
+            conditions:
+              - { path: "exit_code", regex: "^0$" }
+      SPEC
+      cat > /tmp/clean-test/tests/parent/child/spec.yaml << 'SPEC'
+      description: "child reads parent state"
+      steps:
+        - type: exec
+          command: "cat /tmp/clean-state"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "parent-data" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec run --config /tmp/clean-test/treespec.yaml parent --no-mount --keep-tags --rebuild 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "2 passed" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec clean 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Removed" }
+        - { path: "exit_code", regex: "^0$" }

@@ -1,0 +1,38 @@
+description: "add commit chain specs — parent writes, child reads"
+steps:
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/tests/write-state/read-state
+      cat > /tmp/bootstrap-project/tests/write-state/spec.yaml << 'SPEC'
+      description: "write state for children to inherit"
+      steps:
+        - type: exec
+          command: "echo parent-data > /tmp/chain-state"
+          assert:
+            type: regex
+            conditions:
+              - { path: "exit_code", regex: "^0$" }
+      postcon:
+        - name: verify-state-committed
+          steps:
+            - type: exec
+              command: "cat /tmp/chain-state"
+              assert:
+                type: regex
+                conditions:
+                  - { path: "stdout", regex: "parent-data" }
+      SPEC
+      cat > /tmp/bootstrap-project/tests/write-state/read-state/spec.yaml << 'SPEC'
+      description: "read parent committed state"
+      steps:
+        - type: exec
+          command: "cat /tmp/chain-state"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "parent-data" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }

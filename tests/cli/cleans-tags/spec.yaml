@@ -1,9 +1,0 @@
-description: "removes ephemeral tags with clean command"
-steps:
-  - type: exec
-    command: "treespec clean 2>&1"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "(No ephemeral tags|Removed)" }
-        - { path: "exit_code", regex: "^0$" }

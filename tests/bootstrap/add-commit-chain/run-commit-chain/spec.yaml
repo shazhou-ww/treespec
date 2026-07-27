@@ -1,0 +1,9 @@
+description: "run commit chain — expect 2 passed"
+steps:
+  - type: exec
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml write-state --no-mount --no-trace --rebuild 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "2 passed" }
+        - { path: "exit_code", regex: "^0$" }

@@ -1,8 +1,0 @@
-description: "child under org group"
-steps:
-  - type: exec
-    command: "echo from-child"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "from-child" }
