@@ -39,6 +39,40 @@ Common flags:
   --keep-tags          Keep ephemeral tags after run (debug)
   --rebuild            Force rebuild base image
 
+Test tree design principles:
+  Organize by lifecycle, not by feature.
+    init → validate → add cases → run → observe (trace, tree)
+    NOT: group by "http tests", "exec tests", "trace tests"
+
+  Step types are orthogonal to the workflow.
+    exec and http are parallel variants under passing/failing —
+    they are step types, not test categories.
+
+  Observation follows action.
+    show-tree after cases exist; show-trace after a run happened.
+    A node that observes state should be a child of the node that creates it.
+
+  State dependency drives hierarchy.
+    If B needs A's state, B is a child of A.
+    Siblings are independent — each starts from parent's committed state.
+    This minimizes repeated precondition setup.
+
+  Isolate broken/error cases.
+    Put invalid specs in a separate subtree so they don't pollute
+    the main validation flow.
+
+Example (self-test bootstrap tree):
+  bootstrap/
+    spec.yaml              init project
+    validate-fresh/        validate initial state
+    add-specs/             add exec+http, passing+failing
+      validate-passes/     validate after adding
+      run-all/             run → 3 passed, 2 failed
+      run-with-trace/      run with trace → show trace
+      show-tree/           tree shows all specs
+    add-bad-spec/          broken spec (isolated)
+      validate-rejects/    validate → error
+
 For details:
   treespec run --help       — spec format, assert types, wait, postcon, examples
   treespec show --help      — trace format, field reference, jq queries
