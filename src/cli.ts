@@ -36,6 +36,11 @@ const YELLOW = '\x1b[33m';
 const DIM = '\x1b[2m';
 const CYAN = '\x1b[36m';
 
+/** Color "N label" only when N is non-zero; zero is noise, no emphasis. */
+function coloredPhrase(n: number, label: string, color: string): string {
+	return n > 0 ? `${color}${n} ${label}${RESET}` : `${n} ${label}`;
+}
+
 const __moduleDir = dirname(fileURLToPath(import.meta.url));
 
 function loadHelp(name: string): string {
@@ -388,9 +393,9 @@ function printSummary(summary: RunSummary): void {
 			: '';
 	console.log(
 		`${BOLD}Summary${RESET}: ${summary.total} total, ` +
-			`${GREEN}${summary.passed} passed${RESET}, ` +
-			`${RED}${summary.failed} failed${RESET}, ` +
-			`${YELLOW}${summary.skipped} skipped${RESET}${duration}`,
+			`${coloredPhrase(summary.passed, 'passed', GREEN)}, ` +
+			`${coloredPhrase(summary.failed, 'failed', RED)}, ` +
+			`${coloredPhrase(summary.skipped, 'skipped', YELLOW)}${duration}`,
 	);
 }
 
@@ -826,11 +831,14 @@ export async function runShow(args: string[]): Promise<number> {
 			summary.duration_ms !== undefined
 				? ` ${DIM}(${summary.duration_ms}ms)${RESET}`
 				: '';
+		const passed = summary.passed as number;
+		const failed = summary.failed as number;
+		const skipped = summary.skipped as number;
 		console.log(
 			`${BOLD}Summary${RESET}: ${summary.total ?? '?'} total, ` +
-				`${GREEN}${summary.passed ?? 0} passed${RESET}, ` +
-				`${RED}${summary.failed ?? 0} failed${RESET}, ` +
-				`${YELLOW}${summary.skipped ?? 0} skipped${RESET}${duration}`,
+				`${coloredPhrase(passed, 'passed', GREEN)}, ` +
+				`${coloredPhrase(failed, 'failed', RED)}, ` +
+				`${coloredPhrase(skipped, 'skipped', YELLOW)}${duration}`,
 		);
 		if (summary.ended_at) {
 			console.log(`${DIM}Ended: ${summary.ended_at}${RESET}`);
