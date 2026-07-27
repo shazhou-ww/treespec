@@ -620,7 +620,7 @@ export async function runInit(args: string[]): Promise<number> {
 	const testsDir = join(root, 'tests');
 	const exampleDir = join(testsDir, 'example');
 	const configPath = join(root, 'treespec.yaml');
-	const projectName = nameFlag ?? (target.split('/').pop() || 'myapp');
+	const projectName = nameFlag ?? (basename(resolve(process.cwd(), target)) || 'myapp');
 
 	try {
 		await access(configPath);
@@ -634,11 +634,18 @@ export async function runInit(args: string[]): Promise<number> {
 		await mkdir(exampleDir, { recursive: true });
 
 		const configYaml = `name: ${projectName}
+
 image:
   dockerfile: tests/Dockerfile
-  tag: ${projectName}-test:base
+  # tag: ${projectName}-test:base   # default: <name>-test:base
 
 specs: tests
+
+# output: .treespec-output           # default: .treespec-output
+# llm:                               # optional — needed only for llm assertions
+#   base_url: https://api.example.com/v1
+#   model: gpt-4o
+#   api_key_env: OPENAI_API_KEY
 `;
 
 		const dockerfile = `FROM node:22-alpine
