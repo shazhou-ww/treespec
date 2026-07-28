@@ -2,7 +2,7 @@
 
 > Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.
 
-**Status: Design phase.** Spec document in `specs/DESIGN.md`.
+**Status: Design phase.** Spec document in `docs/DESIGN.md`.
 
 ## Concept
 
