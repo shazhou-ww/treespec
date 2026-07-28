@@ -2,8 +2,8 @@ description: "add org node structure — group without spec.yaml"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/org-group/inner
-      cat > /tmp/bootstrap-project/tests/org-group/inner/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/org-group/inner
+      cat > /tmp/bootstrap-project/spec/org-group/inner/spec.yaml << 'SPEC'
       description: "child under org group"
       steps:
         - type: exec

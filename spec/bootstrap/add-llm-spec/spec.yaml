@@ -4,8 +4,8 @@ env:
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/llm-assert
-      cat > /tmp/bootstrap-project/tests/llm-assert/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/llm-assert
+      cat > /tmp/bootstrap-project/spec/llm-assert/spec.yaml << 'SPEC'
       description: "LLM judges command output"
       steps:
         - type: exec

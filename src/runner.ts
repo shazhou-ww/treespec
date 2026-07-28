@@ -32,8 +32,10 @@ export interface NodeResult {
 export interface RunConfig {
 	keepTags: boolean;
 	output?: string;
-	/** Absolute path to the specs root (mounted read-only at /specs). */
-	specsDir: string;
+	/** Absolute path to the project root on host (mounted at /app:ro). */
+	projectDir: string;
+	/** Spec directory relative to projectDir (e.g. "spec"). Used for container WORKDIR. */
+	specRelative: string;
 	/** When false, skip JSONL trace writes. Default true when trace is set. */
 	writeTrace?: boolean;
 	/** Trace writer (created by CLI). */
@@ -42,7 +44,7 @@ export interface RunConfig {
 	llm?: LlmConfig;
 	/** Base image tag (written into trace meta). */
 	baseImage?: string;
-	/** When true, specs are in the image — skip bind mount, use image path as workdir. */
+	/** When true, project is in the image — skip bind mount. */
 	noMount?: boolean;
 	onNode?: (info: {
 		node: TreeNode;
@@ -416,7 +418,8 @@ export async function runTree(
 		if (needsContainer) {
 			containerId = await createAndStartContainer(parentTag, {
 				env,
-				specsDir: config.specsDir,
+				projectDir: config.projectDir,
+				specRelative: config.specRelative,
 				workdir: node.path,
 				noMount: config.noMount,
 			});
@@ -466,7 +469,8 @@ export async function runTree(
 				try {
 					postconId = await createAndStartContainer(ephemeralTag, {
 						env,
-						specsDir: config.specsDir,
+						projectDir: config.projectDir,
+						specRelative: config.specRelative,
 						workdir: node.path,
 						noMount: config.noMount,
 					});

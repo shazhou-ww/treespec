@@ -16,9 +16,10 @@ Minimal spec.yaml:
 Project config (treespec.yaml):
   name: myapp                     # test suite name (trace prefix, image tag default)
   image:
-    dockerfile: tests/Dockerfile  # omit tag → defaults to <name>-test:base
+    dockerfile: spec/Dockerfile  # omit tag → defaults to <name>-test:base
     tag: myapp-test:base
-  specs: tests
+  projectDir: .                   # default: treespec.yaml's dir, mounted at /app:ro
+  spec: spec                    # relative to projectDir, scanned for spec.yaml
 
 Commands:
   treespec run [paths...] [options]   DFS-execute the test tree (or subtrees)
@@ -35,7 +36,7 @@ Common flags:
   --output <path>      Output path (dir → timestamped, .jsonl → exact file)
   --no-trace           Skip trace JSONL output
   --verbose, -v        Show full step output
-  --no-mount           Specs in image (skip bind mount, for DinD)
+  --no-mount           Project in image (skip bind mount, for DinD)
   --keep-tags          Keep ephemeral tags after run (debug)
   --rebuild            Force rebuild base image
 

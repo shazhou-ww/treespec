@@ -17,7 +17,7 @@ exec 和 http 是两种 step 类型，不是两种测试分类。pass/fail 也�
 ### ❌ 按功能分类（错误）
 
 ```
-tests/
+spec/
   http/
     sends-get-request/       自建 fixture、自建 project
     sends-post-request/      自建 fixture、自建 project
@@ -35,7 +35,7 @@ tests/
 ### ✅ 按生命周期组织（正确）
 
 ```
-tests/
+spec/
   bootstrap/
     spec.yaml                init project（一次 setup）
     validate-fresh/         validate 初始状态

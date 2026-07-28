@@ -1,8 +1,12 @@
 name: treespec
 image:
-  dockerfile: tests/Dockerfile
+  dockerfile: spec/Dockerfile
   tag: treespec-fixture:base
 
-specs: tests
+# projectDir defaults to "." — mounted read-only at /app inside containers.
+# Source, node_modules, and dist all come from the mount.
+projectDir: .
+
+spec: spec
 
 output: .treespec-output

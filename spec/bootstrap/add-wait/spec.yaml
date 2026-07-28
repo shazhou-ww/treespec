@@ -2,8 +2,8 @@ description: "add wait/poll spec"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/wait-poll
-      cat > /tmp/bootstrap-project/tests/wait-poll/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/wait-poll
+      cat > /tmp/bootstrap-project/spec/wait-poll/spec.yaml << 'SPEC'
       description: "wait for background process to become ready"
       steps:
         - type: exec

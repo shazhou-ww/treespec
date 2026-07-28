@@ -160,29 +160,57 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 
 ### 3.4 容器文件访问
 
-所有容器（mutator、postcon）在创建时挂载 **specs 目录为只读卷**：
+所有容器（mutator、postcon）在创建时挂载 **projectDir 为只读卷到 `/app`**：
 
 ```
--v <specs_dir>:/specs:ro --workdir /specs/<case-path>
+-v <projectDir>:/app:ro --workdir /app/<spec>/<case-path>
 ```
 
-- spec 文件 + assets 全程可读，无需逐容器复制
+- 项目源码、node_modules、dist 全程可读，无需在 Dockerfile 中安装
+- `spec` 字段指定测试树根目录（相对于 projectDir），容器内为 `/app/<spec>`
 - 每个 step 的 command 在自己的 case 目录（WORKDIR）内执行
 - `assets/` 是保留目录名，scanner 跳过它不当子节点
 - `docker commit` 不影响 mount（ro mount 不进 image layer，状态变更在容器可写层）
 
+**Dockerfile 职责**：仅提供运行时环境（Node.js 等），不安装项目依赖。
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+ENV PATH="/app/node_modules/.bin:$PATH"
+```
+
+项目内容全部从 mount 来。修改代码后无需重建 image，直接重跑即可。
+
 **目录示例：**
 ```
-tests/
-  provider-add/
-    spec.yaml
-    assets/                    # 保留目录名，scanner 跳过
-      config.json
+project/
+  treespec.yaml
+  packages/
+  node_modules/
+  spec/                       # spec 目录
+    provider-add/
+      spec.yaml
+      assets/                  # 保留目录名，scanner 跳过
+        config.json
     model-add/
       spec.yaml
 ```
 
-容器内访问：`cat assets/config.json` 直接可读。
+容器内访问：`cat spec/provider-add/assets/config.json`（从 WORKDIR 相对路径）。
+
+**ro mount 与 docker commit 的交互**：
+
+| 属性 | 说明 |
+|:-----|:-----|
+| mount 内容 | 不进 image layer，commit 不捕获 |
+| 容器可写层 | commit 捕获，子节点可见 |
+| 新容器 | 重新挂同一份 host 路径，看到最新内容 |
+
+这意味着：项目源码变更在宿主修改后立即对所有新容器生效，无需重建 image。
+容器内写入的文件（如数据库、配置）在容器可写层，被 commit 捕获。
+
+**--no-mount（DinD）**：跳过 bind mount，假设项目已 COPY 进 image。WORKDIR 路径计算不变。
 
 ---
 
@@ -238,7 +266,7 @@ TestCase 的**任何判定失败**（step assert 或 postcon assert），都会�
 - **无 `spec.yaml`** = 组织节点（纯分组，直通 parent tag 给子节点，不执行不 commit）
 
 ```
-tests/
+spec/
   provider-add/                 # 测试节点
     spec.yaml
     README.md                   # 可选：文档说明
@@ -412,12 +440,14 @@ treespec/ephemeral:<node-name>
 
 ```yaml
 image:
-  dockerfile: tests/Dockerfile
+  dockerfile: spec/Dockerfile
   tag: myapp-test:base            # base image tag（存在则跳过 build，--rebuild 强制重建）
   args:                           # 可选
     NODE_VERSION: "22"
 
-specs: tests                      # 测试树根目录（递归扫描 spec.yaml），相对于 treespec.yaml
+projectDir: .                     # 项目根目录（默认 "."，相对于 treespec.yaml），挂载为 /app:ro
+
+spec: spec                      # 测试树根目录（递归扫描 spec.yaml），相对于 projectDir
 
 llm:                              # 可选，仅在使用 llm assertion 时需要
   base_url: "https://api.openai.com/v1"
@@ -434,7 +464,8 @@ output: .treespec-output          # 可选
 | `image.dockerfile` | ❌ | Dockerfile 路径（相对于 treespec.yaml）。可省略，改用 `--image` 传入已有 image |
 | `image.tag` | ✅ | Base image tag。已存在则跳过 build，`--rebuild` 强制重建 |
 | `image.args` | ❌ | Docker build args，key-value map |
-| `specs` | ✅ | 测试树根目录（相对于 treespec.yaml），递归扫描含 `spec.yaml` 的子目录 |
+| `projectDir` | ❌ | 项目根目录（相对于 treespec.yaml，默认 `"."`）。挂载为 `/app:ro` |
+| `spec` | ✅ | 测试树根目录（相对于 projectDir），递归扫描含 `spec.yaml` 的子目录 |
 | `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
 | `llm.model` | ❌ | LLM 模型名 |
 | `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |
@@ -449,8 +480,8 @@ output: .treespec-output          # 可选
 ```bash
 treespec run                                # 跑完整测试树
 treespec run --image myapp:latest           # 用已有 image，不 build
-treespec run tests/provider-add/model-add/  # 跑子树（自动含祖先链）
-treespec run tests/*/*/                     # glob 多个子树
+treespec run spec/provider-add/model-add/  # 跑子树（自动含祖先链）
+treespec run spec/*/*/                     # glob 多个子树
 treespec run --rebuild                      # 强制重建 base image
 treespec run --env-file x.env               # 覆盖 .env
 ```
@@ -459,21 +490,22 @@ treespec run --env-file x.env               # 覆盖 .env
 
 ### 7.4 Base Image 构建
 
-Base image 由项目的 Dockerfile 构建，包含：
-- 被测系统的二进制 / 构建产物
-- 运行时依赖（Node.js、Python 等）
-- 测试所需的路径配置（确保 CLI 可被调用）
+Base image 由项目的 Dockerfile 构建，**仅包含运行时环境**：
+
+- Node.js / Python 等运行时
+- 系统级依赖（如 `git`, `curl`）
+- `ENV PATH` 让 mount 进来的 `node_modules/.bin` 可直接调用
+
+项目内容（源码、依赖、构建产物）不在 image 中——全部通过 `projectDir` mount 在运行时提供。
 
 ```dockerfile
-# tests/Dockerfile
-FROM node:20
-COPY dist/ /app/dist/
-COPY packages/cli/bin/ /app/bin/
-RUN cd /app && npm link
+# spec/Dockerfile
+FROM node:22-alpine
 WORKDIR /app
+ENV PATH="/app/node_modules/.bin:$PATH"
 ```
 
-每个项目必须有自己的 Dockerfile。
+修改代码后无需重建 image，直接 `treespec run` 即可用新代码重跑。
 
 ---
 
@@ -482,7 +514,7 @@ WORKDIR /app
 ### 8.1 TestCase 示例
 
 ```yaml
-# tests/provider-add/spec.yaml
+# spec/provider-add/spec.yaml
 description: "添加 openrouter provider"
 env:
   - OPENROUTER_API_KEY
@@ -509,7 +541,7 @@ postcon:
 ```
 
 ```yaml
-# tests/provider-add/model-add/spec.yaml
+# spec/provider-add/model-add/spec.yaml
 description: "添加 claude-4-sonnet model"
 env:
   - OPENROUTER_API_KEY

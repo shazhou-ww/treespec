@@ -15,18 +15,24 @@ export interface ExecResult {
 export interface CreateContainerOptions {
 	env?: Record<string, string>;
 	/**
-	 * Absolute path to the specs root directory.
-	 * Mounted read-only at `/specs` inside the container.
+	 * Absolute path to the project root on the host.
+	 * Mounted read-only at `/app` inside the container.
 	 */
-	specsDir?: string;
+	projectDir?: string;
+	/**
+	 * Path of the spec directory relative to projectDir (e.g. "spec").
+	 * Combined with workdir to form the container WorkingDir:
+	 *   /app/<specRelative>/<workdir>
+	 */
+	specRelative?: string;
 	/**
 	 * Path relative to the specs root (the case directory).
-	 * Becomes WorkingDir `/specs/<workdir>`.
+	 * Becomes WorkingDir `/app/<specRelative>/<workdir>`.
 	 */
 	workdir?: string;
 	/**
-	 * When true, specs are already in the image (baked via COPY).
-	 * Skip the bind mount; use specsDir as WorkingDir directly.
+	 * When true, project is already in the image (baked via COPY).
+	 * Skip the bind mount; WorkingDir still resolves to /app/...
 	 */
 	noMount?: boolean;
 }
@@ -78,8 +84,8 @@ function envToArray(env?: Record<string, string>): string[] | undefined {
  * Create and start a long-running container from `imageTag`.
  * Returns the container id. Caller must remove it.
  *
- * When `specsDir` is set, mounts it read-only at `/specs` and sets
- * WorkingDir to `/specs/<workdir>` (defaults to `/specs`).
+ * When `projectDir` is set, mounts it read-only at `/app` and sets
+ * WorkingDir to `/app/<specRelative>/<workdir>`.
  */
 export async function createAndStartContainer(
 	imageTag: string,
@@ -116,21 +122,22 @@ export async function createAndStartContainer(
 
 	const binds: string[] = [];
 
-	if (options.noMount) {
-		// Specs already in image (baked via COPY). No bind mount needed.
-		const relative = options.workdir && options.workdir !== '.'
-			? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
-			: '';
-		createOpts.WorkingDir = relative
-			? `${options.specsDir}/${relative}`
-			: (options.specsDir ?? undefined);
-	} else if (options.specsDir) {
-		binds.push(`${options.specsDir}:/specs:ro`);
-		const relative = options.workdir && options.workdir !== '.'
-			? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
-			: '';
-		createOpts.WorkingDir = relative ? `/specs/${relative}` : '/specs';
+	// Mount projectDir at /app:ro (skip for noMount / DinD)
+	if (!options.noMount && options.projectDir) {
+		binds.push(`${options.projectDir}:/app:ro`);
 	}
+
+	// WorkingDir: /app/<specRelative>/<workdir>
+	const specsRel = options.specRelative
+		? options.specRelative.replace(/^\/+/, '').replace(/\/+$/, '')
+		: '';
+	const casePath = options.workdir && options.workdir !== '.'
+		? options.workdir.replace(/^\/+/, '').replace(/\/+$/, '')
+		: '';
+	const parts = ['/app'];
+	if (specsRel) parts.push(specsRel);
+	if (casePath) parts.push(casePath);
+	createOpts.WorkingDir = parts.join('/');
 
 	// Always mount Docker socket so containers can use Docker-in-Docker
 	binds.push('/var/run/docker.sock:/var/run/docker.sock');
@@ -279,7 +286,8 @@ export async function runInContainer(
 	try {
 		containerId = await createAndStartContainer(imageTag, {
 			env: options.env,
-			specsDir: options.specsDir,
+			projectDir: options.projectDir,
+			specRelative: options.specRelative,
 			workdir: options.workdir,
 		});
 		return await execInContainer(containerId, command, {
