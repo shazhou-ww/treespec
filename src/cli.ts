@@ -233,11 +233,13 @@ export async function runValidate(args: string[]): Promise<number> {
 	}
 
 	const { configPath, configDir, config } = loaded;
-	const specsRoot = resolve(configDir, config.specs);
+	const projectDir = resolve(configDir, config.projectDir ?? '.');
+	const specsRoot = resolve(projectDir, config.spec);
 	const result = await scanSpecs(specsRoot);
 	const nodeCount = countNodes(result.trees);
 
 	console.log(`Config: ${configPath}`);
+	console.log(`Project: ${projectDir}`);
 	console.log(`Specs:  ${specsRoot}`);
 	console.log(
 		`Image:  ${config.image?.tag ?? '(none)'}` +
@@ -428,7 +430,10 @@ export async function runRun(args: string[]): Promise<number> {
 		}
 	}
 
-	const specsRoot = resolve(configDir, config.specs);
+	const specsRoot = resolve(
+		resolve(configDir, config.projectDir ?? '.'),
+		config.spec,
+	);
 
 	console.log(`Config: ${configPath}`);
 	if (imageFlag) {
@@ -508,7 +513,8 @@ export async function runRun(args: string[]): Promise<number> {
 			trace,
 			llm,
 			baseImage: baseTag,
-			specsDir: specsRoot,
+			projectDir: resolve(configDir, config.projectDir ?? '.'),
+			specRelative: config.spec,
 			noMount,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);
@@ -570,7 +576,10 @@ export async function runTreeCmd(args: string[]): Promise<number> {
 	}
 
 	const { configDir, config } = loaded;
-	const specsRoot = resolve(configDir, config.specs);
+	const specsRoot = resolve(
+		resolve(configDir, config.projectDir ?? '.'),
+		config.spec,
+	);
 	const result = await scanSpecs(specsRoot);
 
 	if (result.errors.length > 0) {
@@ -601,8 +610,8 @@ export async function runInit(args: string[]): Promise<number> {
 
 	const nameFlag = getFlagValue(args, '--name');
 	const root = resolve(process.cwd(), target);
-	const testsDir = join(root, 'tests');
-	const exampleDir = join(testsDir, 'example');
+	const specDir = join(root, 'spec');
+	const exampleDir = join(specDir, 'example');
 	const configPath = join(root, 'treespec.yaml');
 	const projectName = nameFlag ?? (basename(resolve(process.cwd(), target)) || 'myapp');
 
@@ -620,15 +629,26 @@ export async function runInit(args: string[]): Promise<number> {
 		const configYaml = `name: ${projectName}
 
 image:
-  dockerfile: tests/Dockerfile
+  dockerfile: spec/Dockerfile
   # tag: ${projectName}-test:base   # default: <name>-test:base
 
-specs: tests
+# projectDir defaults to "." (this directory).
+# Mounted read-only at /app inside every container.
+# Override with a relative path if treespec.yaml is not at project root:
+# projectDir: ..
+
+spec: spec
 
 # output: .treespec-output           # default: .treespec-output
 `;
 
 		const dockerfile = `FROM node:22-alpine
+
+WORKDIR /app
+
+# Project source, node_modules, and dist are mounted from host at runtime.
+# Add node_modules/.bin to PATH so project CLIs are directly callable.
+ENV PATH="/app/node_modules/.bin:$PATH"
 `;
 
 		const exampleSpec = `description: "example — echo hello"
@@ -642,13 +662,13 @@ steps:
 `;
 
 		await writeFile(configPath, configYaml, 'utf8');
-		await writeFile(join(testsDir, 'Dockerfile'), dockerfile, 'utf8');
+		await writeFile(join(specDir, 'Dockerfile'), dockerfile, 'utf8');
 		await writeFile(join(exampleDir, 'spec.yaml'), exampleSpec, 'utf8');
 
 		console.log(`Created treespec project at ${root}`);
 		console.log('  treespec.yaml');
-		console.log('  tests/Dockerfile');
-		console.log('  tests/example/spec.yaml');
+		console.log('  spec/Dockerfile');
+		console.log('  spec/example/spec.yaml');
 		return 0;
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);

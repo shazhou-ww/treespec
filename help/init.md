@@ -9,7 +9,7 @@ Options:
 Creates:
   <path>/
     treespec.yaml              # minimal config (name, image, specs)
-    tests/
+    spec/
       Dockerfile               # FROM node:22-alpine placeholder
       example/
         spec.yaml              # example: exec + regex assert

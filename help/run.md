@@ -25,7 +25,7 @@ Options:
 
 Test tree structure:
 
-  tests/                         # specs root (configurable)
+  spec/                         # specs root (configurable)
   ├── provider-add/              #   folder = node name
   │   ├── spec.yaml             #   has spec.yaml → test node
   │   ├── assets/               #   reserved: mounted via /specs, skipped by scanner
@@ -194,7 +194,7 @@ assets/ directory:
   Reserved name. Scanner skips it. Files are accessible via mount at /specs.
   Use for fixture data, config files, expected outputs.
 
-  tests/
+  spec/
     my-test/
       spec.yaml
       assets/

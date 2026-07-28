@@ -2,8 +2,8 @@ description: "add passing and failing specs (exec + http step types)"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/echo-hello
-      cat > /tmp/bootstrap-project/tests/echo-hello/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/echo-hello
+      cat > /tmp/bootstrap-project/spec/echo-hello/spec.yaml << 'SPEC'
       description: "exec passing"
       steps:
         - type: exec
@@ -19,8 +19,8 @@ steps:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/fail-case
-      cat > /tmp/bootstrap-project/tests/fail-case/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/fail-case
+      cat > /tmp/bootstrap-project/spec/fail-case/spec.yaml << 'SPEC'
       description: "exec failing"
       steps:
         - type: exec
@@ -36,8 +36,8 @@ steps:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/http-get
-      cat > /tmp/bootstrap-project/tests/http-get/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/http-get
+      cat > /tmp/bootstrap-project/spec/http-get/spec.yaml << 'SPEC'
       description: "http passing"
       steps:
         - type: http
@@ -55,8 +55,8 @@ steps:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/tests/http-fail
-      cat > /tmp/bootstrap-project/tests/http-fail/spec.yaml << 'SPEC'
+      mkdir -p /tmp/bootstrap-project/spec/http-fail
+      cat > /tmp/bootstrap-project/spec/http-fail/spec.yaml << 'SPEC'
       description: "http failing"
       steps:
         - type: http

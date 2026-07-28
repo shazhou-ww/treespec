@@ -15,7 +15,7 @@
 Each test case file references its parent via relative path. The file system *is* the tree.
 
 ```yaml
-# tests/provider/provider-add.yaml
+# spec/provider/provider-add.yaml
 name: provider-add
 steps:
   - type: exec
@@ -25,7 +25,7 @@ steps:
       conditions:
         - { path: stdout, regex: "added" }
 
-# tests/provider/model-add.yaml
+# spec/provider/model-add.yaml
 name: model-add
 parent: ./provider-add.yaml
 steps:

@@ -99,7 +99,11 @@ const ImageConfigSchema = z.object({
 export const TreespecConfigSchema = z.object({
 	name: z.string().min(1).optional(),
 	image: ImageConfigSchema.optional(),
-	specs: z.string().min(1),
+	projectDir: z.string().min(1).refine(
+		(p) => !p.startsWith('/'),
+		'projectDir must be a relative path (absolute paths starting with / are not allowed)',
+	).optional(),
+	spec: z.string().min(1),
 	output: z.string().min(1).optional(),
 });
 

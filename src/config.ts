@@ -52,11 +52,18 @@ export interface TreespecConfig {
 	/** Base image build configuration. Optional (--image flag can be used instead). */
 	image: ImageConfig;
 	/**
-	 * Root directory of the test tree, relative to treespec.yaml.
+	 * Path to the project root, relative to treespec.yaml's directory.
+	 * Defaults to "." (treespec.yaml's own directory).
+	 * Mounted read-only at /app inside every container.
+	 * Must be a relative path — absolute paths are rejected.
+	 */
+	projectDir?: string;
+	/**
+	 * Root directory of the test tree, relative to projectDir.
 	 * treespec recursively scans for directories containing spec.yaml.
 	 * The directory hierarchy = test tree structure.
 	 */
-	specs: string;
+	spec: string;
 	/** Required only if any test case uses `assert: { type: 'llm' }`.
 	 * LLM config is read from env vars: TREESPEC_LLM_BASE_URL,
 	 * TREESPEC_LLM_MODEL, TREESPEC_LLM_API_KEY. */
