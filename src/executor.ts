@@ -161,7 +161,7 @@ export async function createAndStartContainer(
 export async function execInContainer(
 	containerId: string,
 	command: string,
-	options: { timeout?: number; env?: Record<string, string> } = {},
+	options: { timeout?: number } = {},
 ): Promise<ExecResult> {
 	const docker = getDocker();
 	const container = docker.getContainer(containerId);
@@ -178,7 +178,6 @@ export async function execInContainer(
 			Cmd: ['/bin/sh', '-c', command],
 			AttachStdout: true,
 			AttachStderr: true,
-			Env: envToArray(options.env),
 		});
 
 		const stream = await exec.start({ hijack: true, stdin: false });
@@ -292,7 +291,6 @@ export async function runInContainer(
 		});
 		return await execInContainer(containerId, command, {
 			timeout: options.timeout,
-			env: options.env,
 		});
 	} finally {
 		if (containerId) {

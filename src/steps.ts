@@ -167,7 +167,6 @@ export async function executeStep(
 
 	const result: ExecResult = await execInContainer(containerId, command, {
 		timeout: timeoutMs,
-		env,
 	});
 
 	return {

@@ -57,17 +57,17 @@ export async function loadEnvFile(path: string): Promise<Record<string, string>>
 }
 
 /**
- * Merge file env with shell env. Shell values take priority when set.
+ * Merge file env with shell env. Only keys present in fileEnv are included;
+ * shell values take priority when set. This prevents host environment
+ * variables (PATH, HOME, etc.) from leaking into containers.
  */
 export function mergeEnv(
 	fileEnv: Record<string, string>,
 	shellEnv: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
-	const result: Record<string, string> = { ...fileEnv };
-	for (const [key, value] of Object.entries(shellEnv)) {
-		if (value !== undefined) {
-			result[key] = value;
-		}
+	const result: Record<string, string> = {};
+	for (const [key, fileValue] of Object.entries(fileEnv)) {
+		result[key] = shellEnv[key] !== undefined ? shellEnv[key]! : fileValue;
 	}
 	return result;
 }
