@@ -449,7 +449,12 @@ projectDir: .                     # 项目根目录（默认 "."，相对于 tre
 
 spec: spec                      # 测试树根目录（递归扫描 spec.yaml），相对于 projectDir
 
-llm:                              # 可选，仅在使用 llm assertion 时需要
+docker:                          # 可选，Docker 运行时配置
+  network: host                  #   网络模式（host/bridge/none/自定义）
+  extra_hosts:                   #   额外主机记录（同 docker --add-host）
+    - host.docker.internal:host-gateway
+
+llm:
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
   api_key_env: "OPENAI_API_KEY"
@@ -466,6 +471,8 @@ output: .treespec-output          # 可选
 | `image.args` | ❌ | Docker build args，key-value map |
 | `projectDir` | ❌ | 项目根目录（相对于 treespec.yaml，默认 `"."`）。挂载为 `/app:ro` |
 | `spec` | ✅ | 测试树根目录（相对于 projectDir），递归扫描含 `spec.yaml` 的子目录 |
+| `docker.network` | ❌ | Docker 网络模式（host/bridge/none/自定义），透传给 HostConfig.NetworkMode |
+| `docker.extra_hosts` | ❌ | 额外主机记录（同 `docker --add-host`），透传给 HostConfig.ExtraHosts |
 | `llm.base_url` | ❌ | LLM API 端点（OpenAI 兼容，仅用 llm assertion 时需要） |
 | `llm.model` | ❌ | LLM 模型名 |
 | `llm.api_key_env` | ❌ | 存放 API key 的环境变量名（不直接写 key） |

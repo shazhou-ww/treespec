@@ -28,6 +28,22 @@ export interface ImageConfig {
 //   2. image.dockerfile    → build from Dockerfile
 //   3. Neither              → error
 
+// ─── Docker Runtime Config ─────────────────────────────────────
+
+export interface DockerConfig {
+	/**
+	 * Docker network mode for containers (e.g. "host", "bridge", "none").
+	 * Maps to HostConfig.NetworkMode. Docker rejects invalid values.
+	 */
+	network?: string;
+	/**
+	 * Extra host entries, same format as `docker --add-host`.
+	 * Maps to HostConfig.ExtraHosts.
+	 * Example: ["host.docker.internal:host-gateway"]
+	 */
+	extra_hosts?: string[];
+}
+
 // ─── LLM Config (resolved from env vars, not in treespec.yaml) ──
 
 export interface LlmConfig {
@@ -51,6 +67,8 @@ export interface TreespecConfig {
 	name?: string;
 	/** Base image build configuration. Optional (--image flag can be used instead). */
 	image: ImageConfig;
+	/** Docker runtime configuration (network mode, extra hosts). */
+	docker?: DockerConfig;
 	/**
 	 * Path to the project root, relative to treespec.yaml's directory.
 	 * Defaults to "." (treespec.yaml's own directory).

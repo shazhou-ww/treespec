@@ -241,6 +241,10 @@ export async function runValidate(args: string[]): Promise<number> {
 	console.log(`Config: ${configPath}`);
 	console.log(`Project: ${projectDir}`);
 	console.log(`Specs:  ${specsRoot}`);
+	if (config.docker?.network) {
+		console.log(`Docker: network=${config.docker.network}` +
+			(config.docker.extra_hosts ? `, extra_hosts=${config.docker.extra_hosts.join(',')}` : ''));
+	}
 	console.log(
 		`Image:  ${config.image?.tag ?? '(none)'}` +
 			(config.image?.dockerfile ? ` (dockerfile: ${config.image.dockerfile})` : ' (no dockerfile)'),
@@ -516,6 +520,8 @@ export async function runRun(args: string[]): Promise<number> {
 			projectDir: resolve(configDir, config.projectDir ?? '.'),
 			specRelative: config.spec,
 			noMount,
+			network: config.docker?.network,
+			extraHosts: config.docker?.extra_hosts,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);
 				const label = node.spec

@@ -19,7 +19,11 @@ Project config (treespec.yaml):
     dockerfile: spec/Dockerfile  # omit tag → defaults to <name>-test:base
     tag: myapp-test:base
   projectDir: .                   # default: treespec.yaml's dir, mounted at /app:ro
-  spec: spec                    # relative to projectDir, scanned for spec.yaml
+  spec: spec                     # relative to projectDir, scanned for spec.yaml
+  # docker:                      # optional, Docker runtime config
+  #   network: host              #   network mode (host/bridge/none/custom)
+  #   extra_hosts:               #   extra host entries (same as docker --add-host)
+  #     - host.docker.internal:host-gateway
 
 Commands:
   treespec run [paths...] [options]   DFS-execute the test tree (or subtrees)
@@ -45,23 +49,45 @@ LLM assertions (type: llm):
   env vars. Missing → specs with llm asserts auto-skip.
   Put them in .env (treespec.yaml's sibling) or export in shell.
 
-Test tree design principles:
+Test tree design:
+
+  Core model: nodes are STATES, edges are TRANSITIONS.
+
+  Each directory with spec.yaml = an edge (a transition from parent's
+  committed state to a new state). The directory name should be a VERB
+  PHRASE describing the action that causes the transition:
+
+    add-provider/        ← "add a provider" → state now has a provider
+    run-all/             ← "run all specs" → state now has test results
+    show-tree/           ← "show the tree" → observe current state
+    validate-fresh/     ← "validate fresh project" → assert initial state
+
+  NOT nouns or categories:
+    providers/           ← what about them? not an action
+    http-tests/          ← a category, not a transition
+    config/              ← a thing, not something you do
+
+  The verb phrase answers: "what does this transition DO to the system?"
+    parent state --[add-provider]--> child state (provider added)
+    parent state --[run-all]--------> child state (results produced)
+
+  Principles:
 
   1. Organize by lifecycle, not by feature.
-     init → validate → add cases → run → observe (trace, tree)
+     init → validate → add → run → observe
      Step types (exec, http), pass/fail variants — these are orthogonal
      to the lifecycle. They are parallel variants within a stage,
      not separate test categories.
-     DON'T group by "http tests", "exec tests", "trace tests".
 
   2. Observation follows action.
      show-tree after cases exist; show-trace after a run happened.
-     A node that observes state should be a child of the node that creates it.
+     A node that observes state should be a child of the node that
+     creates it — it inherits the state to observe, no extra setup.
 
   3. State dependency drives hierarchy.
      If B needs A's state, B is a child of A.
-     Siblings are independent — each starts from parent's committed state.
-     This minimizes repeated precondition setup.
+     Siblings are independent — each starts from parent's committed
+     state. This minimizes repeated precondition setup.
 
   4. Isolate broken/error cases.
      Put invalid specs in a separate subtree so they don't pollute

@@ -46,6 +46,10 @@ export interface RunConfig {
 	baseImage?: string;
 	/** When true, project is in the image — skip bind mount. */
 	noMount?: boolean;
+	/** Docker network mode (e.g. "host", "bridge"). */
+	network?: string;
+	/** Extra host entries (same format as docker --add-host). */
+	extraHosts?: string[];
 	onNode?: (info: {
 		node: TreeNode;
 		result: NodeResult;
@@ -422,6 +426,8 @@ export async function runTree(
 				specRelative: config.specRelative,
 				workdir: node.path,
 				noMount: config.noMount,
+				network: config.network,
+				extraHosts: config.extraHosts,
 			});
 		}
 
@@ -473,6 +479,8 @@ export async function runTree(
 						specRelative: config.specRelative,
 						workdir: node.path,
 						noMount: config.noMount,
+						network: config.network,
+						extraHosts: config.extraHosts,
 					});
 					const postconSpec: Spec = {
 						description: `${spec.description ?? node.path} / postcon ${postcon.name}`,

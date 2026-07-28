@@ -35,6 +35,10 @@ export interface CreateContainerOptions {
 	 * Skip the bind mount; WorkingDir still resolves to /app/...
 	 */
 	noMount?: boolean;
+	/** Docker network mode (e.g. "host", "bridge"). */
+	network?: string;
+	/** Extra host entries (same format as docker --add-host). */
+	extraHosts?: string[];
 }
 
 export interface RunInContainerOptions extends CreateContainerOptions {
@@ -97,9 +101,18 @@ export async function createAndStartContainer(
 	const hostConfig: {
 		AutoRemove: boolean;
 		Binds?: string[];
+		NetworkMode?: string;
+		ExtraHosts?: string[];
 	} = {
 		AutoRemove: false,
 	};
+
+	if (options.network) {
+		hostConfig.NetworkMode = options.network;
+	}
+	if (options.extraHosts && options.extraHosts.length > 0) {
+		hostConfig.ExtraHosts = options.extraHosts;
+	}
 
 	const createOpts: {
 		Image: string;

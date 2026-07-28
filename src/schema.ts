@@ -96,9 +96,15 @@ const ImageConfigSchema = z.object({
 	args: z.record(z.string()).optional(),
 });
 
+const DockerConfigSchema = z.object({
+	network: z.string().min(1).optional(),
+	extra_hosts: z.array(z.string().min(1)).optional(),
+});
+
 export const TreespecConfigSchema = z.object({
 	name: z.string().min(1).optional(),
 	image: ImageConfigSchema.optional(),
+	docker: DockerConfigSchema.optional(),
 	projectDir: z.string().min(1).refine(
 		(p) => !p.startsWith('/'),
 		'projectDir must be a relative path (absolute paths starting with / are not allowed)',
