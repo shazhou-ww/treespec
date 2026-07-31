@@ -227,8 +227,9 @@ const EPHEMERAL_REPO = 'treespec/ephemeral';
 export function ephemeralTagForPath(nodePath: string): string {
 	const clean = nodePath.replace(/^\/+|\/+$/g, '');
 	const lastSegment = clean.split('/').pop() || 'root';
+	const safeSegment = lastSegment === '.' ? 'root' : lastSegment;
 	const hash = createHash('sha256').update(clean).digest('hex').slice(0, 8);
-	return `${EPHEMERAL_REPO}:${lastSegment}-${hash}`;
+	return `${EPHEMERAL_REPO}:${safeSegment}-${hash}`;
 }
 
 /**
@@ -265,11 +266,9 @@ export async function removeImage(imageTag: string): Promise<void> {
 	try {
 		await docker.getImage(imageTag).remove({ force: true });
 	} catch (err) {
-		const statusCode =
-			err && typeof err === 'object' && 'statusCode' in err
-				? (err as { statusCode?: number }).statusCode
-				: undefined;
-		if (statusCode === 404) {
+		const msg = err instanceof Error ? err.message : String(err);
+		// Ignore 404 — tag already removed (e.g. by treespec clean)
+		if (msg.includes('404') || msg.includes('No such image')) {
 			return;
 		}
 		throw formatDockerError(err);

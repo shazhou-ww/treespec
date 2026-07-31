@@ -575,7 +575,9 @@ export async function runRun(args: string[]): Promise<number> {
 		return 0;
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
+		const stack = err instanceof Error ? err.stack : '';
 		console.error(`Error: ${message}`);
+		if (stack) console.error(stack);
 		return 1;
 	}
 }

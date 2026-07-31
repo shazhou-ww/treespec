@@ -112,27 +112,23 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 			}
 		}
 
-		// Specs root itself is not a node — return synthetic holder with its children.
-		if (relPath === '.') {
-			// Root has no spec.yaml; its children are the top-level spec dirs.
+		const posixPath = toPosix(relPath);
+		const specPath = join(absDir, 'spec.yaml');
+
+		// Root without spec.yaml → forest of independent trees (backward compat).
+		if (relPath === '.' && !(await pathExists(specPath))) {
 			const children: TreeNode[] = [];
 			for (const sub of specSubdirs) {
 				const child = await scanDir(join(absDir, sub), sub);
 				if (child) children.push(child);
 			}
-			return {
-				name: '.',
-				path: '.',
-				spec: { steps: [] }, // synthetic root — no steps
-				branches: children,
-			};
+			return children.length > 0
+				? { name: 'root', path: '.', spec: { steps: [] }, branches: children }
+				: null;
 		}
 
-		const posixPath = toPosix(relPath);
-		const specPath = join(absDir, 'spec.yaml');
-
 		if (!(await pathExists(specPath))) {
-			// Not a test node and not the root — skip silently.
+			// Not a test node — skip silently.
 			return null;
 		}
 
@@ -209,7 +205,7 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 		}
 
 		return {
-			name: basename(relPath),
+			name: relPath === '.' ? 'root' : basename(relPath),
 			path: posixPath,
 			spec,
 			primary: primaryNode,
@@ -217,8 +213,11 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 		};
 	}
 
-	const rootHolder = await scanDir(specsRoot, '.');
-	const trees = rootHolder?.branches ?? [];
+	const root = await scanDir(specsRoot, '.');
+	// Root with spec.yaml → single tree. Root without → forest.
+	const trees = root
+		? (root.spec.steps.length > 0 || root.primary) ? [root] : root.branches
+		: [];
 
 	return {
 		trees,

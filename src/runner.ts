@@ -519,11 +519,13 @@ export async function runTree(
 
 		return { result, summary };
 	} finally {
+		// Best-effort cleanup — ignore errors if tags/containers were already removed
+		// (e.g. by `treespec clean` running inside a child test).
 		if (committed && ephemeralTag && !config.keepTags) {
-			await removeImage(ephemeralTag);
+			try { await removeImage(ephemeralTag); } catch { /* already gone */ }
 		}
 		if (containerId) {
-			await removeContainer(containerId);
+			try { await removeContainer(containerId); } catch { /* already gone */ }
 		}
 	}
 }
