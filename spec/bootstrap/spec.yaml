@@ -21,3 +21,12 @@ steps:
       conditions:
         - { path: "stdout", regex: "ok" }
         - { path: "exit_code", regex: "^0$" }
+
+primary: add-specs
+branches:
+  - add-bad-spec
+  - add-commit-chain
+  - add-llm-spec
+  - add-pruning
+  - add-wait
+  - validate-fresh

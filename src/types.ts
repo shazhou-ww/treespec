@@ -135,4 +135,18 @@ export interface Spec {
 	 * committed (post-condition) tag. Container is destroyed after use.
 	 */
 	postcon?: PostCondition[];
+	/**
+	 * Primary child (嫡长子) — the main-line continuation of this node.
+	 * Directory name relative to this node's directory.
+	 * Required when this node has children; the primary child chain
+	 * (recursing through `primary`) forms the main business flow.
+	 */
+	primary?: string;
+	/**
+	 * Branch children — additional sub-trees that fork off the main line.
+	 * Directory names relative to this node's directory.
+	 * A node may have branches without primary only if it has no children
+	 * at all (leaf node). When children exist, `primary` is mandatory.
+	 */
+	branches?: string[];
 }

@@ -1,5 +1,10 @@
 /**
  * treespec — Recursively scan a specs directory into a test-case forest
+ *
+ * Each test case = a directory containing `spec.yaml`.
+ * Child discovery is explicit via `primary` + `branches` fields in spec.yaml.
+ * Subdirectories with `spec.yaml` not listed in primary/branches → warning.
+ * Subdirectories without `spec.yaml` → silently ignored (assets, fixtures, etc.).
  */
 
 import { readdir, readFile, stat } from 'node:fs/promises';
@@ -12,12 +17,12 @@ export interface TreeNode {
 	name: string;
 	/** Path relative to the specs root. */
 	path: string;
-	/**
-	 * Parsed Spec from spec.yaml.
-	 * Undefined = organizational node (pass-through; no steps / commit).
-	 */
-	spec?: Spec;
-	children: TreeNode[];
+	/** Parsed Spec from spec.yaml. Always present — every node must have spec.yaml. */
+	spec: Spec;
+	/** Primary child (嫡长子) — the main-line continuation. Undefined for leaf nodes. */
+	primary?: TreeNode;
+	/** Branch children — additional sub-trees that fork off the main line. */
+	branches: TreeNode[];
 }
 
 export interface ScanError {
@@ -26,28 +31,31 @@ export interface ScanError {
 	message: string;
 }
 
+export interface ScanWarning {
+	/** Path relative to the specs root. */
+	path: string;
+	message: string;
+}
+
 export interface ScanResult {
 	/** Forest of root nodes (parent = base image S₀). */
 	trees: TreeNode[];
 	errors: ScanError[];
+	warnings: ScanWarning[];
 	/** Deduplicated env var names declared across all specs. */
 	envVars: string[];
 }
 
-/** Reserved directory name — assets are mounted via /specs, not tree children. */
-export const ASSETS_DIR = 'assets';
+/** All children of a node: primary first (if present), then branches. */
+export function allChildren(node: TreeNode): TreeNode[] {
+	return [...(node.primary ? [node.primary] : []), ...node.branches];
+}
 
 async function listSubdirs(dir: string): Promise<string[]> {
 	const entries = await readdir(dir, { withFileTypes: true });
 	return entries
-		.filter(
-			(e) =>
-				e.isDirectory() &&
-				!e.name.startsWith('.') &&
-				e.name !== ASSETS_DIR,
-		)
-		.map((e) => e.name)
-		.sort();
+		.filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+		.map((e) => e.name);
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -64,19 +72,20 @@ function toPosix(path: string): string {
 }
 
 /**
- * Recursively scan `specsRoot` for test / organizational nodes.
- * - Has `spec.yaml` → test node
- * - No `spec.yaml` but has subdirectories → organizational node (pass-through)
- * - No `spec.yaml` and no subdirectories → error
+ * Recursively scan `specsRoot` for test nodes.
+ * - Has `spec.yaml` → test node (children from primary/branches)
+ * - No `spec.yaml` → ignored (not a node)
  */
 export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 	const errors: ScanError[] = [];
+	const warnings: ScanWarning[] = [];
 	const envVars = new Set<string>();
 
 	if (!(await pathExists(specsRoot))) {
 		return {
 			trees: [],
 			errors: [{ path: '.', message: `Specs directory does not exist: ${specsRoot}` }],
+			warnings: [],
 			envVars: [],
 		};
 	}
@@ -86,100 +95,146 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 		return {
 			trees: [],
 			errors: [{ path: '.', message: `Specs path is not a directory: ${specsRoot}` }],
+			warnings: [],
 			envVars: [],
 		};
 	}
 
 	async function scanDir(absDir: string, relPath: string): Promise<TreeNode | null> {
-		const childNames = await listSubdirs(absDir);
-		const children: TreeNode[] = [];
+		const subdirs = await listSubdirs(absDir);
 
-		for (const childName of childNames) {
-			const childAbs = join(absDir, childName);
-			const childRel = relPath === '.' ? childName : `${relPath}/${childName}`;
-			const child = await scanDir(childAbs, childRel);
-			if (child) {
-				children.push(child);
+		// Find which subdirs have spec.yaml (potential children)
+		const specSubdirs: string[] = [];
+		for (const sub of subdirs) {
+			const subSpecPath = join(absDir, sub, 'spec.yaml');
+			if (await pathExists(subSpecPath)) {
+				specSubdirs.push(sub);
 			}
 		}
 
-		// Specs root itself is not a node — return a synthetic holder via children only.
+		// Specs root itself is not a node — return synthetic holder with its children.
 		if (relPath === '.') {
+			// Root has no spec.yaml; its children are the top-level spec dirs.
+			const children: TreeNode[] = [];
+			for (const sub of specSubdirs) {
+				const child = await scanDir(join(absDir, sub), sub);
+				if (child) children.push(child);
+			}
 			return {
 				name: '.',
 				path: '.',
-				children,
+				spec: { steps: [] }, // synthetic root — no steps
+				branches: children,
 			};
 		}
 
 		const posixPath = toPosix(relPath);
 		const specPath = join(absDir, 'spec.yaml');
-		const hasSpec = await pathExists(specPath);
 
-		if (hasSpec) {
-			try {
-				const yaml = await readFile(specPath, 'utf8');
-				const spec = parseSpec(yaml);
-				for (const name of spec.env ?? []) {
-					envVars.add(name);
-				}
-				return {
-					name: basename(relPath),
+		if (!(await pathExists(specPath))) {
+			// Not a test node and not the root — skip silently.
+			return null;
+		}
+
+		let spec: Spec;
+		try {
+			const yaml = await readFile(specPath, 'utf8');
+			spec = parseSpec(yaml);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			errors.push({
+				path: posixPath,
+				message: `Failed to parse spec.yaml: ${message}`,
+			});
+			return null;
+		}
+
+		for (const name of spec.env ?? []) {
+			envVars.add(name);
+		}
+
+		// Validate: branches without primary is invalid
+		if (spec.branches && spec.branches.length > 0 && !spec.primary) {
+			errors.push({
+				path: posixPath,
+				message: 'branches declared without primary — primary is required when children exist',
+			});
+		}
+
+		// Resolve children from primary/branches
+		const declaredNames = new Set<string>();
+		if (spec.primary) declaredNames.add(spec.primary);
+		if (spec.branches) for (const b of spec.branches) declaredNames.add(b);
+
+		// Warn for spec.yaml subdirs not declared
+		for (const sub of specSubdirs) {
+			if (!declaredNames.has(sub)) {
+				warnings.push({
 					path: posixPath,
-					spec,
-					children,
-				};
-			} catch (err) {
-				const message = err instanceof Error ? err.message : String(err);
-				errors.push({
-					path: posixPath,
-					message: `Failed to parse spec.yaml: ${message}`,
+					message: `subdirectory "${sub}" has spec.yaml but is not declared in primary/branches`,
 				});
-				return null;
 			}
 		}
 
-		if (children.length > 0) {
-			// Organizational node — pass-through, no steps / commit.
-			return {
-				name: basename(relPath),
-				path: posixPath,
-				children,
-			};
+		// Resolve primary child
+		let primaryNode: TreeNode | undefined;
+		if (spec.primary) {
+			const primaryAbs = join(absDir, spec.primary);
+			const primaryNodeOrNull = await scanDir(primaryAbs, `${relPath === '.' ? '' : relPath + '/'}${spec.primary}`);
+			if (primaryNodeOrNull) {
+				primaryNode = primaryNodeOrNull;
+			} else {
+				errors.push({
+					path: posixPath,
+					message: `primary child "${spec.primary}" not found or has no valid spec.yaml`,
+				});
+			}
 		}
 
-		errors.push({
+		// Resolve branch children
+		const branchNodes: TreeNode[] = [];
+		if (spec.branches) {
+			for (const branchName of spec.branches) {
+				const branchAbs = join(absDir, branchName);
+				const branchNode = await scanDir(branchAbs, `${relPath === '.' ? '' : relPath + '/'}${branchName}`);
+				if (branchNode) {
+					branchNodes.push(branchNode);
+				} else {
+					errors.push({
+						path: posixPath,
+						message: `branch child "${branchName}" not found or has no valid spec.yaml`,
+					});
+				}
+			}
+		}
+
+		return {
+			name: basename(relPath),
 			path: posixPath,
-			message: 'Empty node: no spec.yaml and no subdirectories',
-		});
-		return null;
+			spec,
+			primary: primaryNode,
+			branches: branchNodes,
+		};
 	}
 
 	const rootHolder = await scanDir(specsRoot, '.');
-	const trees = rootHolder?.children ?? [];
-
-	function sortChildren(nodes: TreeNode[]): void {
-		nodes.sort((a, b) => a.name.localeCompare(b.name));
-		for (const n of nodes) {
-			sortChildren(n.children);
-		}
-	}
-	sortChildren(trees);
+	const trees = rootHolder?.branches ?? [];
 
 	return {
 		trees,
 		errors,
+		warnings,
 		envVars: [...envVars].sort(),
 	};
 }
 
-/** Count nodes in a forest (including organizational nodes). */
+/** Count nodes in a forest. */
 export function countNodes(trees: TreeNode[]): number {
 	let count = 0;
 	function walk(nodes: TreeNode[]): void {
 		for (const n of nodes) {
 			count++;
-			walk(n.children);
+			walk(allChildren(n));
 		}
 	}
 	walk(trees);
@@ -197,7 +252,7 @@ export function findNode(trees: TreeNode[], targetPath: string): TreeNode | unde
 				found = n;
 				return;
 			}
-			walk(n.children);
+			walk(allChildren(n));
 			if (found) return;
 		}
 	}
@@ -213,17 +268,13 @@ export function formatForest(trees: TreeNode[]): string {
 			const isLast = index === nodes.length - 1;
 			const branch = isLast ? '└── ' : '├── ';
 			const indent = isLastList.map((last) => (last ? '    ' : '│   ')).join('');
-			if (!node.spec) {
-				lines.push(`${indent}${branch}${node.name} [org]`);
-			} else {
-				const env = node.spec.env?.length ? ` [env: ${node.spec.env.join(', ')}]` : '';
-				const postcon = node.spec.postcon?.length
-					? node.spec.postcon.map((p) => ` [postcon: ${p.name}]`).join('')
-					: '';
-				const desc = node.spec.description ? ` — ${node.spec.description}` : '';
-				lines.push(`${indent}${branch}${node.name}${desc}${env}${postcon}`);
-			}
-			walk(node.children, [...isLastList, isLast]);
+			const env = node.spec.env?.length ? ` [env: ${node.spec.env.join(', ')}]` : '';
+			const postcon = node.spec.postcon?.length
+				? node.spec.postcon.map((p) => ` [postcon: ${p.name}]`).join('')
+				: '';
+			const desc = node.spec.description ? ` — ${node.spec.description}` : '';
+			lines.push(`${indent}${branch}${node.name}${desc}${env}${postcon}`);
+			walk(allChildren(node), [...isLastList, isLast]);
 		});
 	}
 	walk(trees, []);
@@ -250,7 +301,7 @@ export function coveringSubtree(
 
 	function addSubtree(node: TreeNode): void {
 		include.add(node.path);
-		for (const child of node.children) {
+		for (const child of allChildren(node)) {
 			addSubtree(child);
 		}
 	}
@@ -268,7 +319,8 @@ export function coveringSubtree(
 			.filter((n) => include.has(n.path))
 			.map((n) => ({
 				...n,
-				children: filter(n.children),
+				primary: n.primary && include.has(n.primary.path) ? filter([n.primary])[0] : undefined,
+				branches: filter(n.branches),
 			}));
 	}
 

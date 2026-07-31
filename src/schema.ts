@@ -86,6 +86,8 @@ export const SpecSchema = z.object({
 	env: z.array(z.string().min(1)).optional(),
 	steps: z.array(StepSchema).min(1),
 	postcon: z.array(PostConditionSchema).optional(),
+	primary: z.string().min(1).optional(),
+	branches: z.array(z.string().min(1)).optional(),
 });
 
 // ─── Config ──────────────────────────────────────────────────────

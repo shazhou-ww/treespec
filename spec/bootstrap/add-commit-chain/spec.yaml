@@ -21,6 +21,7 @@ steps:
                 type: regex
                 conditions:
                   - { path: "stdout", regex: "parent-data" }
+      primary: read-state
       SPEC
       cat > /tmp/bootstrap-project/spec/write-state/read-state/spec.yaml << 'SPEC'
       description: "read parent committed state"
@@ -36,3 +37,5 @@ steps:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
+
+primary: run-commit-chain

@@ -17,3 +17,5 @@ steps:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
+
+primary: validate-rejects

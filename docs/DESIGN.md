@@ -306,16 +306,17 @@ spec/
 - 目录名 = 用例名（无需声明 `name`）
 - 可选 `.md` 文件放在同目录做文档说明
 
-**组织节点执行逻辑：**
+**每个节点都有 spec.yaml，无组织节点。** 子节点发现通过 spec.yaml 中的 `primary` + `branches` 字段显式声明。
+
+**子节点发现逻辑：**
 ```
-execute(node, parent_tag):
-  if node has spec.yaml:
-    # 正常流程：steps → commit → postcon → children
-    ...
-  else:
-    # 组织节点：直通 parent_tag 给子节点用
-    for child in node.children:
-      execute(child, parent_tag)
+scan(dir):
+  spec = parse(dir/spec.yaml)
+  declared = {spec.primary} ∪ {spec.branches}
+  for subdir in dir/*:
+    if subdir has spec.yaml and subdir not in declared:
+      warn("subdirectory not declared in primary/branches")
+  children = resolve(declared)   # primary first, then branches
 ```
 
 **消除了：** parent 引用、parent 校验、循环依赖检测——文件系统天然保证结构正确。
@@ -350,7 +351,7 @@ execute(node, parent_tag):
       return    # 剪枝：跳过 postcon 和子节点
 
   # 步骤 4: 是否需要 commit？
-  need_commit = node.has_children OR node.has_postcon
+  need_commit = node.has_primary_or_branches OR node.has_postcon
 
   if need_commit:
     new_tag = docker commit container   # 产生 post-condition tag
@@ -369,9 +370,11 @@ execute(node, parent_tag):
           return    # 剪枝：postcon 失败也剪枝
     docker rm postcon_container
 
-  # 步骤 6: 继续执行子节点
-  if node.has_children:
-    for child in node.children:
+  # 步骤 6: 继续执行子节点（primary 先行，再 branches）
+  if node.has_primary_or_branches:
+    if node.primary:
+      execute(node.primary, new_tag)
+    for child in node.branches:
       execute(child, new_tag)
     docker rmi new_tag   # 所有子节点跑完，删掉这个 tag
 

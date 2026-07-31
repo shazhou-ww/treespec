@@ -8,6 +8,7 @@ steps:
       steps:
         - type: exec
           command: "exit 1"
+      primary: prune-child
       SPEC
       cat > /tmp/bootstrap-project/spec/prune-parent/prune-child/spec.yaml << 'SPEC'
       description: "should be skipped when parent fails"
@@ -23,3 +24,5 @@ steps:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
+
+primary: run-pruning
