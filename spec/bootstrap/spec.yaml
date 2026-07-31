@@ -28,5 +28,6 @@ branches:
   - add-commit-chain
   - add-llm-spec
   - add-pruning
+  - add-primary-branches
   - add-wait
   - validate-fresh

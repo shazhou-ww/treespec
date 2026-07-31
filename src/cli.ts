@@ -280,6 +280,13 @@ export async function runValidate(args: string[]): Promise<number> {
 		console.log('Env:   (none declared)');
 	}
 
+	if (result.warnings.length > 0) {
+		console.log();
+		for (const warn of result.warnings) {
+			console.warn(`  ⚠ ${warn.path}: ${warn.message}`);
+		}
+	}
+
 	if (result.errors.length > 0) {
 		console.log();
 		console.error(`Errors (${result.errors.length}):`);
