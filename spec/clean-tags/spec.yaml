@@ -25,6 +25,7 @@ steps:
             type: regex
             conditions:
               - { path: "exit_code", regex: "^0$" }
+      primary: child
       SPEC
       cat > /tmp/clean-test/spec/parent/child/spec.yaml << 'SPEC'
       description: "child reads parent state"

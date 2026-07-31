@@ -18,6 +18,7 @@ import { loadEnvFile, mergeEnv } from './env.js';
 import { runForest, type NodeResult, type RunSummary } from './runner.js';
 import { parseConfig } from './schema.js';
 import {
+	allChildren,
 	countNodes,
 	coveringSubtree,
 	findNode,
@@ -175,7 +176,7 @@ function collectAllPaths(trees: TreeNode[]): string[] {
 	function walk(nodes: TreeNode[]): void {
 		for (const n of nodes) {
 			paths.push(n.path);
-			walk(n.children);
+			walk(allChildren(n));
 		}
 	}
 	walk(trees);
@@ -524,10 +525,8 @@ export async function runRun(args: string[]): Promise<number> {
 			extraHosts: config.docker?.extra_hosts,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);
-				const label = node.spec
-					? node.path
-					: `${node.path} [org]`;
-				const desc = node.spec?.description ? ` ${DIM}— ${node.spec.description}${RESET}` : '';
+				const label = node.path;
+			const desc = node.spec.description ? ` ${DIM}— ${node.spec.description}${RESET}` : '';
 				console.log(
 					`${pad}${CYAN}▶${RESET} ${BOLD}${label}${RESET}${desc}  ${colorStatus(result.status)}  ${DIM}${result.reason}${RESET}`,
 				);

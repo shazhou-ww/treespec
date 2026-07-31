@@ -13,7 +13,7 @@ import {
 	createAndStartContainer,
 	removeContainer,
 } from './executor.js';
-import { countNodes, type TreeNode } from './scanner.js';
+import { countNodes, allChildren, type TreeNode } from './scanner.js';
 import {
 	executeStep,
 	isExecStepResult,
@@ -118,7 +118,7 @@ function cascadeSkip(
 		stepResults: [],
 	};
 	record(summary, node, result, depth, config);
-	for (const child of node.children) {
+	for (const child of allChildren(node)) {
 		cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
 	}
 }
@@ -350,7 +350,6 @@ async function runSteps(
 
 /**
  * DFS-execute a tree node against `parentTag`.
- * Organizational nodes pass `parentTag` through to children (no steps / commit).
  */
 export async function runTree(
 	node: TreeNode,
@@ -360,20 +359,6 @@ export async function runTree(
 	depth = 0,
 	summary: RunSummary = { total: 0, passed: 0, failed: 0, skipped: 0, results: [] },
 ): Promise<{ result: NodeResult; summary: RunSummary }> {
-	// ── Organizational node: pass-through ──────────────────────────
-	if (!node.spec) {
-		const result: NodeResult = {
-			status: 'PASS',
-			reason: 'organizational node (pass-through)',
-			stepResults: [],
-		};
-		record(summary, node, result, depth, config);
-		for (const child of node.children) {
-			await runTree(child, parentTag, env, config, depth + 1, summary);
-		}
-		return { result, summary };
-	}
-
 	const spec = node.spec;
 
 	// ── Env check ──────────────────────────────────────────────────
@@ -386,7 +371,7 @@ export async function runTree(
 				stepResults: [],
 			};
 			record(summary, node, result, depth, config);
-			for (const child of node.children) {
+			for (const child of allChildren(node)) {
 				cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
 			}
 			return { result, summary };
@@ -401,7 +386,7 @@ export async function runTree(
 			stepResults: [],
 		};
 		record(summary, node, result, depth, config);
-		for (const child of node.children) {
+		for (const child of allChildren(node)) {
 			cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
 		}
 		return { result, summary };
@@ -415,7 +400,7 @@ export async function runTree(
 	const needsContainer =
 		spec.steps.some((s) => s.type === 'exec') ||
 		(spec.postcon?.some((p) => p.steps.some((s) => s.type === 'exec')) ?? false) ||
-		node.children.length > 0 ||
+		allChildren(node).length > 0 ||
 		(spec.postcon?.length ?? 0) > 0;
 
 	try {
@@ -451,13 +436,13 @@ export async function runTree(
 				stepResults,
 			};
 			record(summary, node, result, depth, config);
-			for (const child of node.children) {
+			for (const child of allChildren(node)) {
 				cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
 			}
 			return { result, summary };
 		}
 
-		const hasChildren = node.children.length > 0;
+		const hasChildren = allChildren(node).length > 0;
 		const hasPostcon = (spec.postcon?.length ?? 0) > 0;
 		const needCommit = hasChildren || hasPostcon;
 
@@ -505,7 +490,7 @@ export async function runTree(
 							stepResults,
 						};
 						record(summary, node, result, depth, config);
-						for (const child of node.children) {
+						for (const child of allChildren(node)) {
 							cascadeSkip(child, 'parent skipped', config, depth + 1, summary);
 						}
 						return { result, summary };
@@ -527,7 +512,7 @@ export async function runTree(
 
 		// ── Children (DFS) ───────────────────────────────────────────
 		if (hasChildren && ephemeralTag) {
-			for (const child of node.children) {
+			for (const child of allChildren(node)) {
 				await runTree(child, ephemeralTag, env, config, depth + 1, summary);
 			}
 		}
