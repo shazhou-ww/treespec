@@ -1,0 +1,82 @@
+description: "add primary/branches test specs — verify explicit child discovery"
+steps:
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/spec/primary-demo/primary-child/leaf-a
+      mkdir -p /tmp/bootstrap-project/spec/primary-demo/branch-b/leaf-b
+      mkdir -p /tmp/bootstrap-project/spec/primary-demo/branch-c
+      cat > /tmp/bootstrap-project/spec/primary-demo/spec.yaml << 'SPEC'
+      description: "primary demo root"
+      steps:
+        - type: exec
+          command: "echo root"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "root" }
+      primary: primary-child
+      branches:
+        - branch-b
+        - branch-c
+      SPEC
+      cat > /tmp/bootstrap-project/spec/primary-demo/primary-child/spec.yaml << 'SPEC'
+      description: "primary child — main line continuation"
+      steps:
+        - type: exec
+          command: "echo primary"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "primary" }
+      primary: leaf-a
+      SPEC
+      cat > /tmp/bootstrap-project/spec/primary-demo/primary-child/leaf-a/spec.yaml << 'SPEC'
+      description: "leaf on main line"
+      steps:
+        - type: exec
+          command: "echo leaf-a"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "leaf-a" }
+      SPEC
+      cat > /tmp/bootstrap-project/spec/primary-demo/branch-b/spec.yaml << 'SPEC'
+      description: "branch b"
+      steps:
+        - type: exec
+          command: "echo branch-b"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "branch-b" }
+      primary: leaf-b
+      SPEC
+      cat > /tmp/bootstrap-project/spec/primary-demo/branch-b/leaf-b/spec.yaml << 'SPEC'
+      description: "leaf under branch b"
+      steps:
+        - type: exec
+          command: "echo leaf-b"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "leaf-b" }
+      SPEC
+      cat > /tmp/bootstrap-project/spec/primary-demo/branch-c/spec.yaml << 'SPEC'
+      description: "branch c — leaf node"
+      steps:
+        - type: exec
+          command: "echo branch-c"
+          assert:
+            type: regex
+            conditions:
+              - { path: "stdout", regex: "branch-c" }
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+
+primary: run-tree
+branches:
+  - run-validate-warning
+  - run-no-primary-error

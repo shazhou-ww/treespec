@@ -1,0 +1,12 @@
+description: "verify tree shows primary first, then branches"
+steps:
+  - type: exec
+    command: "treespec tree --config /tmp/bootstrap-project/treespec.yaml primary-demo --no-mount 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "primary-demo" }
+        - { path: "stdout", regex: "primary-child" }
+        - { path: "stdout", regex: "branch-b" }
+        - { path: "stdout", regex: "branch-c" }
+        - { path: "exit_code", regex: "^0$" }

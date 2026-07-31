@@ -1,0 +1,33 @@
+description: "verify warning for spec.yaml subdir not declared in primary/branches"
+steps:
+  - type: exec
+    command: |
+      mkdir -p /tmp/bootstrap-project/spec/warning-demo/orphan-child
+      mkdir -p /tmp/bootstrap-project/spec/warning-demo/declared-child
+      cat > /tmp/bootstrap-project/spec/warning-demo/spec.yaml << 'SPEC'
+      description: "has an undeclared child"
+      steps:
+        - type: exec
+          command: "echo parent"
+      primary: declared-child
+      SPEC
+      mkdir -p /tmp/bootstrap-project/spec/warning-demo/declared-child
+      cat > /tmp/bootstrap-project/spec/warning-demo/declared-child/spec.yaml << 'SPEC'
+      description: "declared child"
+      steps:
+        - type: exec
+          command: "echo declared"
+      SPEC
+      cat > /tmp/bootstrap-project/spec/warning-demo/orphan-child/spec.yaml << 'SPEC'
+      description: "orphan child — not in primary/branches"
+      steps:
+        - type: exec
+          command: "echo orphan"
+      SPEC
+      treespec validate --config /tmp/bootstrap-project/treespec.yaml 2>&1
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "orphan-child" }
+        - { path: "stdout", regex: "not declared" }
+        - { path: "exit_code", regex: "^0$" }
