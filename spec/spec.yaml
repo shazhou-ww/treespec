@@ -1,0 +1,7 @@
+description: "treespec self-test tree root"
+# Container node: no steps, just declares children to form a single tree.
+primary: bootstrap
+branches:
+  - clean-tags
+  - rejects-missing-config
+  - shows-help

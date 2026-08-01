@@ -361,6 +361,9 @@ export async function runTree(
 ): Promise<{ result: NodeResult; summary: RunSummary }> {
 	const spec = node.spec;
 
+	// Container/passthrough node: no steps and no postcon → pass parentTag directly to children
+	const isPassthrough = spec.steps.length === 0 && (spec.postcon?.length ?? 0) === 0;
+
 	// ── Env check ──────────────────────────────────────────────────
 	for (const varName of spec.env ?? []) {
 		const value = env[varName];
@@ -397,11 +400,11 @@ export async function runTree(
 	let committed = false;
 	const stepResults: StepResult[] = [];
 
-	const needsContainer =
+	const needsContainer = !isPassthrough && (
 		spec.steps.some((s) => s.type === 'exec') ||
 		(spec.postcon?.some((p) => p.steps.some((s) => s.type === 'exec')) ?? false) ||
-		allChildren(node).length > 0 ||
-		(spec.postcon?.length ?? 0) > 0;
+		(spec.postcon?.length ?? 0) > 0
+	);
 
 	try {
 		if (needsContainer) {
@@ -505,15 +508,19 @@ export async function runTree(
 
 		const result: NodeResult = {
 			status: 'PASS',
-			reason: `${spec.steps.length} step${spec.steps.length === 1 ? '' : 's'} passed`,
+			reason: isPassthrough
+				? 'container node (passthrough)'
+				: `${spec.steps.length} step${spec.steps.length === 1 ? '' : 's'} passed`,
 			stepResults,
 		};
 		record(summary, node, result, depth, config);
 
 		// ── Children (DFS) ───────────────────────────────────────────
-		if (hasChildren && ephemeralTag) {
+		// Passthrough nodes pass parentTag directly; committed nodes pass their ephemeral tag.
+		const childTag = ephemeralTag ?? parentTag;
+		if (hasChildren && childTag) {
 			for (const child of allChildren(node)) {
-				await runTree(child, ephemeralTag, env, config, depth + 1, summary);
+				await runTree(child, childTag, env, config, depth + 1, summary);
 			}
 		}
 

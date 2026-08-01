@@ -1,0 +1,31 @@
+description: "verify root spec.yaml creates a single tree (Roots: 1)"
+steps:
+  - type: exec
+    command: |
+      rm -rf /tmp/root-tree-test
+      treespec init /tmp/root-tree-test --name root-tree-test 2>&1
+      # Add a root spec.yaml — container node with primary, no steps
+      cat > /tmp/root-tree-test/spec/spec.yaml << 'SPEC'
+      description: "root container node"
+      primary: example
+      SPEC
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec validate --config /tmp/root-tree-test/treespec.yaml 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Roots: 1" }
+        - { path: "stdout", regex: "root" }
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "treespec tree --config /tmp/root-tree-test/treespec.yaml --no-mount 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "root" }
+        - { path: "stdout", regex: "example" }
+        - { path: "exit_code", regex: "^0$" }

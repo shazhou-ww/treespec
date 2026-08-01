@@ -80,3 +80,4 @@ primary: run-tree
 branches:
   - run-validate-warning
   - run-no-primary-error
+  - run-root-tree

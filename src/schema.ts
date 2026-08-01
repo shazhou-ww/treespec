@@ -81,14 +81,19 @@ const PostConditionSchema = z.object({
 	steps: z.array(StepSchema).min(1),
 });
 
-export const SpecSchema = z.object({
-	description: z.string().optional(),
-	env: z.array(z.string().min(1)).optional(),
-	steps: z.array(StepSchema).min(1),
-	postcon: z.array(PostConditionSchema).optional(),
-	primary: z.string().min(1).optional(),
-	branches: z.array(z.string().min(1)).optional(),
-});
+export const SpecSchema = z
+	.object({
+		description: z.string().optional(),
+		env: z.array(z.string().min(1)).optional(),
+		steps: z.array(StepSchema).optional().default([]),
+		postcon: z.array(PostConditionSchema).optional(),
+		primary: z.string().min(1).optional(),
+		branches: z.array(z.string().min(1)).optional(),
+	})
+	.refine(
+		(data) => (data.steps?.length ?? 0) > 0 || data.primary || (data.branches && data.branches.length > 0),
+		'steps must have at least 1 entry unless primary/branches are declared (container node)',
+	);
 
 // ─── Config ──────────────────────────────────────────────────────
 
