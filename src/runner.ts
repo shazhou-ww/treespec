@@ -553,9 +553,25 @@ export async function runForest(
 	const totalNodes = countNodes(trees);
 
 	if (config.writeTrace !== false && config.trace) {
+		// Build tree structure for lineage computation in `show`
+		const roots = trees.map((t) => t.path);
+		const primaryMap: Record<string, string> = {};
+		function walkPrimary(node: TreeNode): void {
+			if (node.primary) {
+				primaryMap[node.path] = node.primary.path;
+				walkPrimary(node.primary);
+			}
+			for (const branch of node.branches) {
+				walkPrimary(branch);
+			}
+		}
+		for (const root of trees) walkPrimary(root);
+
 		await config.trace.writeMeta(totalNodes, {
 			name: 'treespec run',
 			base_image: config.baseImage,
+			roots,
+			primary_map: primaryMap,
 		});
 	}
 

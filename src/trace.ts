@@ -16,6 +16,10 @@ export type TraceMeta = {
 	started_at: string;
 	total_nodes: number;
 	base_image?: string;
+	/** Root node paths (for lineage computation in `show`). */
+	roots?: string[];
+	/** Map of node_path → primary child path (for lineage computation in `show`). */
+	primary_map?: Record<string, string>;
 };
 
 export type TraceStep = {
@@ -46,7 +50,7 @@ export type TraceSummary = {
 export type TraceLine = TraceMeta | TraceStep | TraceSummary;
 
 export interface TraceWriter {
-	writeMeta(totalNodes: number, opts?: { name?: string; base_image?: string }): Promise<void>;
+	writeMeta(totalNodes: number, opts?: { name?: string; base_image?: string; roots?: string[]; primary_map?: Record<string, string> }): Promise<void>;
 	writeStep(step: {
 		index?: number;
 		step_index?: number;
@@ -74,7 +78,7 @@ class NullTraceWriter implements TraceWriter {
 
 	async writeMeta(
 		_totalNodes: number,
-		_opts?: { name?: string; base_image?: string },
+		_opts?: { name?: string; base_image?: string; roots?: string[]; primary_map?: Record<string, string> },
 	): Promise<void> {}
 	async writeStep(_step: {
 		index?: number;
@@ -106,7 +110,7 @@ class FileTraceWriter implements TraceWriter {
 
 	async writeMeta(
 		totalNodes: number,
-		opts?: { name?: string; base_image?: string },
+		opts?: { name?: string; base_image?: string; roots?: string[]; primary_map?: Record<string, string> },
 	): Promise<void> {
 		await this.append({
 			type: 'meta',
@@ -114,6 +118,8 @@ class FileTraceWriter implements TraceWriter {
 			started_at: new Date().toISOString(),
 			total_nodes: totalNodes,
 			base_image: opts?.base_image,
+			roots: opts?.roots,
+			primary_map: opts?.primary_map,
 		});
 	}
 

@@ -1,9 +1,13 @@
 treespec show — replay a trace as human-readable output
 
-Usage: treespec show <trace.jsonl> [options]
+Usage: treespec show <trace.jsonl> [node-path] [options]
 
 Reads a JSONL trace file and prints the same human-readable tree output
 that was shown during "treespec run". Useful for reviewing past runs.
+
+When [node-path] is given, shows only the lineage (primary chain) through
+that node — ancestors, the node itself, and its primary descendants.
+Branch nodes (小宗) show the node + its own primary descendants.
 
 ═══════════════════════════════════════════════════════════════
 
@@ -17,7 +21,8 @@ Options:
 
 Trace structure (JSONL — one JSON object per line):
 
-  meta     Run metadata (name, started_at, total_nodes, base_image)
+  meta     Run metadata (name, started_at, total_nodes, base_image,
+           roots, primary_map)
   step     Step records (index, node_path, command, stdout, stderr,
            exit_code, verdict, reason, duration_ms)
   summary  Final result (total, passed, failed, skipped, duration_ms,
@@ -42,8 +47,14 @@ Examples:
   # Replay a trace
   treespec show .treespec-output/trace.jsonl
 
+  # Show lineage through a specific node (primary chain)
+  treespec show .treespec-output/trace.jsonl bootstrap/add-specs
+
   # Only show failures (with full output)
   treespec show .treespec-output/trace.jsonl -fv
+
+  # Lineage + failures only
+  treespec show .treespec-output/trace.jsonl bootstrap/add-specs -f
 
   # jq for quick pass/fail check
   jq -r 'select(.type=="summary") | "\(.passed) passed, \(.failed) failed"' trace.jsonl

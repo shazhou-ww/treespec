@@ -884,15 +884,53 @@ steps:
 	}
 }
 
+/**
+ * Compute lineage (ancestors → node → primary descendants) from trace meta.
+ * Returns the list of node paths on the primary chain through the target node.
+ */
+function computeLineage(
+	roots: string[],
+	primaryMap: Record<string, string>,
+	targetPath: string,
+): string[] {
+	// Find ancestors: walk from roots following primary chain to target
+	for (const root of roots) {
+		const chain: string[] = [root];
+		let current = root;
+		while (primaryMap[current]) {
+			current = primaryMap[current]!;
+			chain.push(current);
+			if (current === targetPath) {
+				// Found target — continue to primary descendants
+				let desc = current;
+				while (primaryMap[desc]) {
+					desc = primaryMap[desc]!;
+					chain.push(desc);
+				}
+				return chain;
+			}
+		}
+	}
+	// Target not on root's primary chain — show target + its own primary descendants
+	const chain = [targetPath];
+	let desc = targetPath;
+	while (primaryMap[desc]) {
+		desc = primaryMap[desc]!;
+		chain.push(desc);
+	}
+	return chain;
+}
+
 export async function runShow(args: string[]): Promise<number> {
 	const positionals = getPositionalArgs(args);
 	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
 	const failuresOnly = hasFlag(args, '--failures') || hasFlag(args, '-f');
 
 	const tracePath = positionals[0];
+	const lineageNode = positionals[1]; // optional: show only this node's lineage
 	if (!tracePath) {
 		console.error('Error: treespec show requires a trace file path');
-		console.error('Usage: treespec show <trace.jsonl> [options]');
+		console.error('Usage: treespec show <trace.jsonl> [node-path] [options]');
 		return 1;
 	}
 
@@ -945,6 +983,22 @@ export async function runShow(args: string[]): Promise<number> {
 		console.log();
 	}
 
+	// ── Lineage filter ─────────────────────────────────────────────
+	let lineagePaths: Set<string> | null = null;
+	if (lineageNode) {
+		const roots = (meta?.roots as string[]) ?? [];
+		const primaryMap = (meta?.primary_map as Record<string, string>) ?? {};
+		if (roots.length > 0 && Object.keys(primaryMap).length > 0) {
+			lineagePaths = new Set(computeLineage(roots, primaryMap, lineageNode));
+			console.log(`${BOLD}Lineage${RESET}: ${lineagePaths.size} node${lineagePaths.size === 1 ? '' : 's'} on primary chain through ${CYAN}${lineageNode}${RESET}`);
+			console.log();
+		} else {
+			// Old trace without tree structure — fall back to path prefix filter
+			console.log(`${DIM}Note: trace has no tree structure, filtering by path prefix${RESET}`);
+			console.log();
+		}
+	}
+
 	// ── Group steps by node_path ──────────────────────────────────
 	const nodeMap = new Map<string, typeof steps>();
 	for (const step of steps) {
@@ -954,7 +1008,15 @@ export async function runShow(args: string[]): Promise<number> {
 	}
 
 	// Sort nodes in DFS order (alphabetical on path segments = DFS for trees)
-	const sortedPaths = [...nodeMap.keys()].sort();
+	let sortedPaths = [...nodeMap.keys()].sort();
+
+	// Apply lineage filter
+	if (lineageNode && lineagePaths) {
+		sortedPaths = sortedPaths.filter((p) => lineagePaths!.has(p));
+	} else if (lineageNode) {
+		// Old trace — path prefix filter
+		sortedPaths = sortedPaths.filter((p) => p === lineageNode || p.startsWith(`${lineageNode}/`));
+	}
 
 	for (const nodePath of sortedPaths) {
 		const stepList = nodeMap.get(nodePath)!;
