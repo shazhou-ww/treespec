@@ -216,9 +216,10 @@ project/
 无需 `HOST_PROJECT_DIR` 或 `/.dockerenv` 检测。
 
 存储驱动使用 `fuse-overlayfs`（`vfs` 会丢失文件执行权限，`overlay2` 在嵌套容器中不支持）。
-Data-root 设在 `/dev/shm`（tmpfs），不进 `docker commit`，子容器自动从干净状态启动。
+Data-root 设在默认 `/var/lib/docker`——进 `docker commit`，子容器继承父容器拉取的镜像，
+无需重复拉取。dind-init 只清理 stale 运行时状态（pidfile/socket/containerd），不删 data-root。
 
-容器创建时设 `--privileged`（DinD 需要）+ `--shm-size=2g`（tmpfs 默认 64MB 不够用）。
+容器创建时设 `--privileged`（DinD 需要）。
 Executor 的 `Cmd` 用 shell wrapper 自动检测 `dind-init`：
 - 有 dind-init（treespec-fixture:base）→ 启动 dockerd + sleep
 - 无 dind-init（bootstrap-test:base）→ 直接 sleep
@@ -230,7 +231,7 @@ Executor 的 `Cmd` 用 shell wrapper 自动检测 `dind-init`：
 treespec run
 
 # 容器内跑（自测场景）— 不需要 docker.sock 或 HOST_PROJECT_DIR
-docker run --privileged --shm-size=2g -v "$(pwd):/app" \
+docker run --privileged -v "$(pwd):/app" \
   treespec-fixture:base treespec run --no-trace --keep-tags
 ```
 

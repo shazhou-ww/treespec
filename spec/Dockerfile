@@ -16,10 +16,10 @@ RUN echo '#!/bin/sh' > /usr/local/bin/treespec && \
     echo 'exec node /app/dist/index.js "$@"' >> /usr/local/bin/treespec && \
     chmod +x /usr/local/bin/treespec
 
-# DinD init: use /dev/shm (tmpfs) for data-root — not captured by docker commit,
-# so child containers start clean without "Resource busy" mount conflicts.
-# fuse-overlayfs for nested containers (overlay2 doesn't work, vfs loses permissions).
-# Clean stale runtime state from parent's committed layer before starting.
+# DinD init: clean stale runtime state (pid/socket/containerd) from parent's
+# committed layer, then start dockerd with fuse-overlayfs.
+# Data-root stays at default /var/lib/docker — captured by docker commit,
+# so child containers inherit parent's pulled images (no re-pull needed).
 # Executor detects dind-init via Cmd shell wrapper — no ENTRYPOINT needed.
-RUN printf '#!/bin/sh\nrm -rf /var/run/docker /var/run/docker.pid /var/run/docker.sock\ndockerd --storage-driver=fuse-overlayfs --data-root=/dev/shm/docker-data > /dev/null 2>&1 &\nfor i in $(seq 1 60); do\n  docker info > /dev/null 2>&1 && break\n  sleep 0.5\ndone\nexec "$@"\n' > /usr/local/bin/dind-init && \
+RUN printf '#!/bin/sh\nrm -rf /var/run/docker /var/run/docker.pid /var/run/docker.sock\ndockerd --storage-driver=fuse-overlayfs > /dev/null 2>&1 &\nfor i in $(seq 1 60); do\n  docker info > /dev/null 2>&1 && break\n  sleep 0.5\ndone\nexec "$@"\n' > /usr/local/bin/dind-init && \
     chmod +x /usr/local/bin/dind-init

@@ -99,11 +99,9 @@ export async function createAndStartContainer(
 		NetworkMode?: string;
 		ExtraHosts?: string[];
 		Privileged: boolean;
-		ShmSize: number;
 	} = {
 		AutoRemove: false,
 		Privileged: true, // DinD: required to run dockerd inside the container
-		ShmSize: 2 * 1024 * 1024 * 1024, // 2GB for /dev/shm (DinD data-root)
 	};
 
 	if (options.network) {
