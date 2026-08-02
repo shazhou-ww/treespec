@@ -79,4 +79,5 @@ branches:
   - run-with-keep-tags
   - run-with-trace
   - show-tree
+  - show-lineage
   - validate-passes

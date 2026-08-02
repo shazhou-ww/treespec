@@ -9,6 +9,7 @@ steps:
         - { path: "stdout", regex: "treespec run" }
         - { path: "stdout", regex: "treespec validate" }
         - { path: "stdout", regex: "treespec tree" }
+        - { path: "stdout", regex: "treespec lineage" }
         - { path: "stdout", regex: "treespec init" }
         - { path: "stdout", regex: "treespec clean" }
         - { path: "stdout", regex: "For details" }

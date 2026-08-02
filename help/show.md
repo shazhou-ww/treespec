@@ -64,3 +64,4 @@ Exit codes:
 See also:
   treespec run --help   — how traces are generated
   treespec tree --help  — tree structure visualization
+  treespec lineage --help — primary path (大宗) in list format

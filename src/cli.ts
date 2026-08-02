@@ -635,7 +635,9 @@ function formatStepDetails(steps: TreeNode['spec']['steps']): string[] {
 	steps.forEach((step, i) => {
 		const num = `${i + 1}.`;
 		if (step.type === 'exec') {
-			const cmd = step.command.length > 80 ? step.command.slice(0, 77) + '...' : step.command;
+			// Show first line only for readability; multi-line commands (heredocs) are truncated
+			const firstLine = step.command.split('\n')[0] ?? '';
+			const cmd = firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine;
 			lines.push(`    ${num} exec: ${cmd}`);
 		} else {
 			lines.push(`    ${num} http: ${step.request.method} ${step.request.url}`);
@@ -690,8 +692,8 @@ function formatLineage(
 		const isStart = node === start;
 		const isLast = i === fullList.length - 1;
 
-		// Node header line
-		lines.push(formatLineageNode(node, isStart && !descendants.length));
+		// Node header line — mark start with ← here only when ancestors are shown
+		lines.push(formatLineageNode(node, isStart && ancestors.length > 0 && !descendants.length));
 
 		// Detail lines
 		if (opts.showSteps) {

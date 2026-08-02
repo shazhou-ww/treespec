@@ -16,3 +16,6 @@ Markers:
   [org]       — organizational node (no spec.yaml, pass-through)
   [env: VAR]  — declares required env vars
   [postcon: name] — has post-condition verification
+
+See also:
+  treespec lineage --help — primary path (大宗) only, in list format

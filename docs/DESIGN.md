@@ -520,26 +520,53 @@ treespec run spec/provider-add/model-add/  # 跑子树（自动含祖先链）
 treespec run spec/*/*/                     # glob 多个子树
 treespec run --rebuild                      # 强制重建 base image
 treespec run --env-file x.env               # 覆盖 .env
+treespec tree                               # 可视化全树（含所有小宗）
+treespec lineage                            # 显示大宗主线（根→叶）
+treespec lineage bootstrap/add-specs        # 从指定节点开始
+treespec lineage bootstrap --only-descends  # 只看后代
+treespec lineage bootstrap --only-ancestors  # 只看先祖
+treespec validate                           # 校验配置 + spec 树
+treespec init <path>                        # 创建项目脚手架
+treespec clean                              # 清理 ephemeral image tags
+treespec show <trace.jsonl>                 # 回放 trace
 ```
 
 **image 来源优先级**：`--image` > `image.dockerfile`。两者都没有则报错。
 
 ### 7.4 Base Image 构建
 
-Base image 由项目的 Dockerfile 构建，**仅包含运行时环境**：
+Base image 由项目的 Dockerfile 构建，分两类内容：
 
-- Node.js / Python 等运行时
-- 系统级依赖（如 `git`, `curl`）
-- `ENV PATH` 让 mount 进来的 `node_modules/.bin` 可直接调用
+| 类别 | 是否进镜像 | 说明 |
+|:-----|:----------|:-----|
+| 运行时环境（Node.js 等） | ✅ | `FROM node:22-alpine` |
+| 工具件（dist、node_modules、help） | ✅ | COPY 进镜像，子容器通过 `docker commit` 继承 |
+| 项目数据（spec、treespec.yaml、源码） | ❌ | 运行时 mount，不进镜像 |
 
-项目内容（源码、依赖、构建产物）不在 image 中——全部通过 `projectDir` mount 在运行时提供。
+工具件必须进镜像的原因：`docker commit` 只捕获容器可写层，**不捕获 mount 内容**。
+子容器从父镜像继承文件系统——如果 `dist/` 只在 mount 层，commit 后子容器找不到 `treespec`。
 
 ```dockerfile
 # spec/Dockerfile
 FROM node:22-alpine
 WORKDIR /app
+
+# 工具件：COPY 进镜像，子容器通过 docker commit 继承
+COPY dist/ ./dist/
+COPY node_modules/ ./node_modules/
+COPY package.json ./
+COPY help/ ./help/
+
 ENV PATH="/app/node_modules/.bin:$PATH"
+
+# treespec CLI wrapper
+RUN echo '#!/bin/sh' > /usr/local/bin/treespec && \
+    echo 'exec node /app/dist/index.js "$@"' >> /usr/local/bin/treespec && \
+    chmod +x /usr/local/bin/treespec
 ```
+
+项目数据（spec、treespec.yaml）全部从 mount 来。修改测试用例后无需重建 image。
+但修改工具源码（src/）后需要 `tsc` + `docker build` 重建。
 
 修改代码后无需重建 image，直接 `treespec run` 即可用新代码重跑。
 
