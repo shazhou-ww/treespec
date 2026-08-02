@@ -15,11 +15,3 @@ ENV PATH="/app/node_modules/.bin:$PATH"
 RUN echo '#!/bin/sh' > /usr/local/bin/treespec && \
     echo 'exec node /app/dist/index.js "$@"' >> /usr/local/bin/treespec && \
     chmod +x /usr/local/bin/treespec
-
-# DinD init: clean stale runtime state (pid/socket/containerd) from parent's
-# committed layer, then start dockerd with fuse-overlayfs.
-# Data-root stays at default /var/lib/docker — captured by docker commit,
-# so child containers inherit parent's pulled images (no re-pull needed).
-# Executor detects dind-init via Cmd shell wrapper — no ENTRYPOINT needed.
-RUN printf '#!/bin/sh\nrm -rf /var/run/docker /var/run/docker.pid /var/run/docker.sock\ndockerd --storage-driver=fuse-overlayfs > /dev/null 2>&1 &\nfor i in $(seq 1 60); do\n  docker info > /dev/null 2>&1 && break\n  sleep 0.5\ndone\nexec "$@"\n' > /usr/local/bin/dind-init && \
-    chmod +x /usr/local/bin/dind-init

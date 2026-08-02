@@ -113,7 +113,6 @@ export async function createAndStartContainer(
 
 	const createOpts: {
 		Image: string;
-		Entrypoint: string[];
 		Cmd: string[];
 		Env?: string[];
 		AttachStdout: boolean;
@@ -123,12 +122,7 @@ export async function createAndStartContainer(
 		HostConfig: typeof hostConfig;
 	} = {
 		Image: imageTag,
-		// Clear any inherited ENTRYPOINT (e.g. node's docker-entrypoint.sh)
-		// so Cmd runs directly. dind-init is detected by the Cmd shell wrapper.
-		Entrypoint: [],
-		// Shell wrapper: run dind-init if present (DinD images), else just sleep.
-		// Use full paths to avoid PATH issues in vfs-built containers.
-		Cmd: ['/bin/sh', '-c', '[ -x /usr/local/bin/dind-init ] && exec /usr/local/bin/dind-init sleep infinity || exec /bin/sleep infinity'],
+		Cmd: ['sleep', 'infinity'],
 		Env: envToArray(env),
 		AttachStdout: false,
 		AttachStderr: false,

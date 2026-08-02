@@ -10,6 +10,7 @@ import type { LlmConfig } from './config.js';
 import {
 	buildImage,
 	cleanEphemeralTags,
+	ensureDockerd,
 	imageExists,
 	pullImageIfMissing,
 	type BuildProgressEvent,
@@ -468,6 +469,8 @@ export async function runRun(args: string[]): Promise<number> {
 	console.log();
 
 	try {
+		// Ensure dockerd is running (no-op on host, starts DinD dockerd in containers)
+		await ensureDockerd();
 		const resolved = await resolveBaseImage(config, configDir, args);
 		if ('error' in resolved) {
 			console.error(`Error: ${resolved.error}`);
@@ -1051,6 +1054,7 @@ export async function runShow(args: string[]): Promise<number> {
 
 export async function runClean(_args: string[]): Promise<number> {
 	try {
+		await ensureDockerd();
 		const removed = await cleanEphemeralTags();
 		if (removed.length === 0) {
 			console.log('No ephemeral tags to remove');
