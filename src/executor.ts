@@ -3,7 +3,6 @@
  */
 
 import { PassThrough } from 'node:stream';
-import { existsSync } from 'node:fs';
 import Docker from 'dockerode';
 
 export interface ExecResult {
@@ -16,7 +15,7 @@ export interface ExecResult {
 export interface CreateContainerOptions {
 	env?: Record<string, string>;
 	/**
-	 * Absolute path to the project root on the host.
+	 * Absolute path to the project root (container-internal in DinD).
 	 * Mounted read-only at `/app` inside the container.
 	 */
 	projectDir?: string;
@@ -99,8 +98,12 @@ export async function createAndStartContainer(
 		Binds?: string[];
 		NetworkMode?: string;
 		ExtraHosts?: string[];
+		Privileged: boolean;
+		ShmSize: number;
 	} = {
 		AutoRemove: false,
+		Privileged: true, // DinD: required to run dockerd inside the container
+		ShmSize: 2 * 1024 * 1024 * 1024, // 2GB for /dev/shm (DinD data-root)
 	};
 
 	if (options.network) {
@@ -112,6 +115,7 @@ export async function createAndStartContainer(
 
 	const createOpts: {
 		Image: string;
+		Entrypoint: string[];
 		Cmd: string[];
 		Env?: string[];
 		AttachStdout: boolean;
@@ -121,7 +125,12 @@ export async function createAndStartContainer(
 		HostConfig: typeof hostConfig;
 	} = {
 		Image: imageTag,
-		Cmd: ['sleep', 'infinity'],
+		// Clear any inherited ENTRYPOINT (e.g. node's docker-entrypoint.sh)
+		// so Cmd runs directly. dind-init is detected by the Cmd shell wrapper.
+		Entrypoint: [],
+		// Shell wrapper: run dind-init if present (DinD images), else just sleep.
+		// Use full paths to avoid PATH issues in vfs-built containers.
+		Cmd: ['/bin/sh', '-c', '[ -x /usr/local/bin/dind-init ] && exec /usr/local/bin/dind-init sleep infinity || exec /bin/sleep infinity'],
 		Env: envToArray(env),
 		AttachStdout: false,
 		AttachStderr: false,
@@ -132,11 +141,10 @@ export async function createAndStartContainer(
 	const binds: string[] = [];
 
 	// Mount projectDir at /app:ro.
-	// Auto-detect: in container without HOST_PROJECT_DIR → skip (project in committed image).
-	const inContainer = existsSync('/.dockerenv');
-	const mountSource = process.env.HOST_PROJECT_DIR || options.projectDir;
-	if (mountSource && (!inContainer || process.env.HOST_PROJECT_DIR)) {
-		binds.push(`${mountSource}:/app:ro`);
+	// DinD: each container runs its own dockerd, so bind mount paths are always
+	// container-internal. No need for HOST_PROJECT_DIR or /.dockerenv detection.
+	if (options.projectDir) {
+		binds.push(`${options.projectDir}:/app:ro`);
 	}
 
 	// WorkingDir: /app/<specRelative>/<workdir>
@@ -151,8 +159,7 @@ export async function createAndStartContainer(
 	if (casePath) parts.push(casePath);
 	createOpts.WorkingDir = parts.join('/');
 
-	// Always mount Docker socket so containers can use Docker-in-Docker
-	binds.push('/var/run/docker.sock:/var/run/docker.sock');
+	// No docker.sock mount — DinD: each container runs its own dockerd.
 	if (binds.length > 0) {
 		hostConfig.Binds = binds;
 	}

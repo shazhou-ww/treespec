@@ -9,7 +9,7 @@ steps:
         - { path: "stdout", regex: "bootstrap" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "printf 'FROM node:22-alpine\\nCOPY . /tmp/bootstrap-project\\n' > /tmp/bootstrap-project/spec/Dockerfile"
+    command: "printf 'FROM node:22-alpine\\n' > /tmp/bootstrap-project/spec/Dockerfile"
     assert:
       type: regex
       conditions:

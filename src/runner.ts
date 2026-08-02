@@ -32,7 +32,7 @@ export interface NodeResult {
 export interface RunConfig {
 	keepTags: boolean;
 	output?: string;
-	/** Absolute path to the project root on host (mounted at /app:ro). */
+	/** Absolute path to project root (container-internal in DinD). Mounted at /app:ro. */
 	projectDir: string;
 	/** Spec directory relative to projectDir (e.g. "spec"). Used for container WORKDIR. */
 	specRelative: string;

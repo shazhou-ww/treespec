@@ -211,18 +211,26 @@ project/
 这意味着：项目源码变更在宿主修改后立即对所有新容器生效，无需重建 image。
 容器内写入的文件（如数据库、配置）在容器可写层，被 commit 捕获。
 
-**DooD 运行模式**：当 `treespec run` 在容器内执行时（如自测），通过 `HOST_PROJECT_DIR`
-环境变量传递宿主机项目路径，子容器 bind mount 使用该路径。
-内层 `treespec run`（在 spec step 中调用）自动检测：在容器内且无 `HOST_PROJECT_DIR`
-时跳过 bind mount（项目数据在 committed image 中）。
+**DinD 运行模式**：每个测试容器运行自己的 dockerd（Docker-in-Docker），
+实现真正的状态隔离。Bind mount 路径始终是容器内路径（`/app`），
+无需 `HOST_PROJECT_DIR` 或 `/.dockerenv` 检测。
+
+存储驱动使用 `fuse-overlayfs`（`vfs` 会丢失文件执行权限，`overlay2` 在嵌套容器中不支持）。
+Data-root 设在 `/dev/shm`（tmpfs），不进 `docker commit`，子容器自动从干净状态启动。
+
+容器创建时设 `--privileged`（DinD 需要）+ `--shm-size=2g`（tmpfs 默认 64MB 不够用）。
+Executor 的 `Cmd` 用 shell wrapper 自动检测 `dind-init`：
+- 有 dind-init（treespec-fixture:base）→ 启动 dockerd + sleep
+- 无 dind-init（bootstrap-test:base）→ 直接 sleep
+
+同时设 `Entrypoint: []` 清除继承的 ENTRYPOINT（如 node 的 `docker-entrypoint.sh`）。
 
 ```bash
 # 宿主机直接跑
 treespec run
 
-# DooD 容器内跑（自测）
-docker run -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$(pwd):/app" -e HOST_PROJECT_DIR="$(pwd)" \
+# 容器内跑（自测场景）— 不需要 docker.sock 或 HOST_PROJECT_DIR
+docker run --privileged --shm-size=2g -v "$(pwd):/app" \
   treespec-fixture:base treespec run --no-trace --keep-tags
 ```
 
@@ -526,6 +534,7 @@ treespec show <trace.jsonl>                 # 回放 trace
 Base image 由项目的 Dockerfile 构建，**仅提供运行时环境**：
 
 - Node.js / Python 等运行时
+- Docker daemon（DinD，`fuse-overlayfs` 存储驱动）
 - 系统级依赖（如 `git`, `curl`）
 - `ENV PATH` 让 mount 进来的 `node_modules/.bin` 可直接调用
 
@@ -534,8 +543,10 @@ Base image 由项目的 Dockerfile 构建，**仅提供运行时环境**：
 ```dockerfile
 # spec/Dockerfile
 FROM node:22-alpine
+RUN apk add --no-cache docker fuse-overlayfs fuse
 WORKDIR /app
 ENV PATH="/app/node_modules/.bin:$PATH"
+# dind-init: 清理 stale state, 启动 fuse-overlayfs dockerd, 等待就绪
 ```
 
 修改代码后无需重建 image，直接 `treespec run` 即可用新代码重跑。
