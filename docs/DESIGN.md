@@ -172,15 +172,39 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 - `assets/` 是保留目录名，scanner 跳过它不当子节点
 - `docker commit` 不影响 mount（ro mount 不进 image layer，状态变更在容器可写层）
 
-**Dockerfile 职责**：仅提供运行时环境（Node.js 等），不安装项目依赖。
+**Dockerfile 职责**：提供运行时环境 + 工具本身，不含项目数据。
+
+分两类内容：
+
+| 类别 | 是否进镜像 | 说明 |
+|:-----|:----------|:-----|
+| 运行时环境（Node.js） | ✅ | `FROM node:22-alpine` |
+| 工具件（dist、node_modules、help） | ✅ | COPY 进镜像，子容器通过 `docker commit` 继承 |
+| 项目数据（spec、treespec.yaml、源码） | ❌ | 运行时 mount，不进镜像 |
+
+为什么工具件必须进镜像？因为 `docker commit` 只捕获容器可写层，**不捕获 mount 内容**。
+子容器从父镜像继承文件系统——如果 `dist/` 只在 mount 层，commit 后子容器就找不到 `treespec` 了。
 
 ```dockerfile
 FROM node:22-alpine
 WORKDIR /app
+
+# 工具件：COPY 进镜像，子容器通过 docker commit 继承
+COPY dist/ ./dist/
+COPY node_modules/ ./node_modules/
+COPY package.json ./
+COPY help/ ./help/
+
 ENV PATH="/app/node_modules/.bin:$PATH"
+
+# treespec CLI wrapper
+RUN echo '#!/bin/sh' > /usr/local/bin/treespec && \
+    echo 'exec node /app/dist/index.js "$@"' >> /usr/local/bin/treespec && \
+    chmod +x /usr/local/bin/treespec
 ```
 
-项目内容全部从 mount 来。修改代码后无需重建 image，直接重跑即可。
+项目数据（spec、treespec.yaml）全部从 mount 来。修改测试用例后无需重建 image，直接重跑即可。
+但修改工具源码（src/）后需要 `tsc` + `docker build` 重建，因为 dist/ 是 COPY 进去的。
 
 **目录示例：**
 ```
@@ -210,7 +234,9 @@ project/
 这意味着：项目源码变更在宿主修改后立即对所有新容器生效，无需重建 image。
 容器内写入的文件（如数据库、配置）在容器可写层，被 commit 捕获。
 
-**--no-mount（DinD）**：跳过 bind mount，假设项目已 COPY 进 image。WORKDIR 路径计算不变。
+**--no-mount（DinD 自测）**：子容器跳过 bind mount，仅依赖镜像内的工具件。
+外层 `docker run` 仍挂载项目目录（提供 treespec.yaml + spec/），但子容器不挂载——
+它们通过 `docker commit` 继承镜像中的 dist/node_modules，在 `/tmp/` 下创建自己的测试项目。
 
 ---
 

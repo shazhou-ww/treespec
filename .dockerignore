@@ -1,6 +1,4 @@
-node_modules
 .treespec-output
 .git
-dist
 *.md
 !help/*.md
