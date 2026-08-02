@@ -29,7 +29,8 @@ Commands:
   treespec run [paths...] [options]   DFS-execute the test tree (or subtrees)
   treespec show <trace.jsonl>         Replay a trace as human-readable output
   treespec validate [--config <path>] Check config + spec tree for errors
-  treespec tree [--config <path>]     Visualize the test tree structure
+  treespec tree [--config <path>]     Visualize the full test tree structure
+  treespec lineage [node] [options]  Show the primary descent line (大宗)
   treespec init <path>                Create a project scaffold
   treespec clean                      Remove all ephemeral image tags
   treespec help                       Show this help
@@ -112,5 +113,6 @@ For details:
   treespec show --help      — trace format, field reference, jq queries
   treespec validate --help  — validation rules, common errors
   treespec tree --help      — tree output format
+  treespec lineage --help   — primary path, scope modes, detail levels
   treespec init --help      — scaffold structure
   treespec clean --help     — tag naming, cleanup scope

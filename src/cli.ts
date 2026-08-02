@@ -22,7 +22,9 @@ import {
 	countNodes,
 	coveringSubtree,
 	findNode,
+	findPrimaryAncestors,
 	formatForest,
+	primaryDescendants,
 	scanSpecs,
 	type TreeNode,
 } from './scanner.js';
@@ -613,6 +615,194 @@ export async function runTreeCmd(args: string[]): Promise<number> {
 	return 0;
 }
 
+// ─── lineage ──────────────────────────────────────────────────
+
+/** Format a single node as a list entry (name + description). */
+function formatLineageNode(node: TreeNode, isStart: boolean): string {
+	const desc = node.spec.description ? ` — ${node.spec.description}` : '';
+	const marker = isStart ? ' ← here' : '';
+	return `${node.name}${desc}${marker}`;
+}
+
+/** Format step details for verbose output. */
+function formatStepDetails(steps: TreeNode['spec']['steps']): string[] {
+	const lines: string[] = [];
+	if (!steps.length) {
+		lines.push('  (no steps — container/passthrough node)');
+		return lines;
+	}
+	lines.push('  steps:');
+	steps.forEach((step, i) => {
+		const num = `${i + 1}.`;
+		if (step.type === 'exec') {
+			const cmd = step.command.length > 80 ? step.command.slice(0, 77) + '...' : step.command;
+			lines.push(`    ${num} exec: ${cmd}`);
+		} else {
+			lines.push(`    ${num} http: ${step.request.method} ${step.request.url}`);
+		}
+	});
+	return lines;
+}
+
+/** Format assert details for verbose output. */
+function formatAssertDetails(assert: TreeNode['spec']['steps'][number]['assert']): string[] {
+	const lines: string[] = [];
+	if (!assert) return lines;
+	switch (assert.type) {
+		case 'regex':
+			lines.push(`  assert: regex`);
+			for (const c of assert.conditions) {
+				lines.push(`    ${c.path} =~ /${c.regex}/`);
+			}
+			break;
+		case 'jsonata':
+			lines.push(`  assert: jsonata ${assert.expression}`);
+			break;
+		case 'llm':
+			lines.push(`  assert: llm "${assert.prompt}"`);
+			break;
+	}
+	return lines;
+}
+
+/** Format postcon details for verbose output. */
+function formatPostconDetails(postcon: TreeNode['spec']['postcon']): string[] {
+	const lines: string[] = [];
+	if (!postcon?.length) return lines;
+	for (const p of postcon) {
+		lines.push(`  postcon: ${p.name} (${p.steps.length} steps)`);
+	}
+	return lines;
+}
+
+/** Format the full lineage as a linear list. */
+function formatLineage(
+	ancestors: TreeNode[],
+	start: TreeNode,
+	descendants: TreeNode[],
+	opts: { showSteps: boolean; showAsserts: boolean; showPostcon: boolean },
+): string {
+	const lines: string[] = [];
+	const fullList = [...ancestors, start, ...descendants];
+
+	for (let i = 0; i < fullList.length; i++) {
+		const node = fullList[i]!;
+		const isStart = node === start;
+		const isLast = i === fullList.length - 1;
+
+		// Node header line
+		lines.push(formatLineageNode(node, isStart && !descendants.length));
+
+		// Detail lines
+		if (opts.showSteps) {
+			lines.push(...formatStepDetails(node.spec.steps));
+		}
+		if (opts.showAsserts) {
+			// Find first step with assert for display
+			const stepWithAssert = node.spec.steps.find((s) => s.assert);
+			lines.push(...formatAssertDetails(stepWithAssert?.assert));
+		}
+		if (opts.showPostcon) {
+			lines.push(...formatPostconDetails(node.spec.postcon));
+		}
+
+		// Show primary pointer (if not leaf)
+		if (node.primary) {
+			if (opts.showSteps || opts.showAsserts || opts.showPostcon) {
+				lines.push(`  primary → ${node.primary.name}`);
+			}
+		} else if (isLast && (opts.showSteps || opts.showAsserts || opts.showPostcon)) {
+			lines.push('  (leaf)');
+		}
+	}
+
+	return lines.join('\n');
+}
+
+export async function runLineage(args: string[]): Promise<number> {
+	const loaded = await loadProjectConfig(args);
+	if ('error' in loaded) {
+		console.error(`Error: ${loaded.error}`);
+		return loaded.code;
+	}
+
+	const { configDir, config } = loaded;
+	const specsRoot = resolve(
+		resolve(configDir, config.projectDir ?? '.'),
+		config.spec,
+	);
+	const result = await scanSpecs(specsRoot);
+
+	if (result.errors.length > 0) {
+		console.error(`Errors (${result.errors.length}):`);
+		for (const err of result.errors) {
+			console.error(`  ✗ ${err.path}: ${err.message}`);
+		}
+		return 1;
+	}
+
+	if (result.trees.length === 0) {
+		console.log('(empty — no spec.yaml found)');
+		return 0;
+	}
+
+	// Parse flags
+	const onlyAncestors = hasFlag(args, '--only-ancestors');
+	const onlyDescends = hasFlag(args, '--only-descends');
+	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
+	const opts = {
+		showSteps: verbose || hasFlag(args, '--steps'),
+		showAsserts: verbose || hasFlag(args, '--asserts'),
+		showPostcon: verbose || hasFlag(args, '--postcon'),
+	};
+
+	// Find starting node
+	const positionals = getPositionalArgs(args);
+	const nodeArg = positionals[0];
+
+	let startNode: TreeNode;
+	let ancestors: TreeNode[] = [];
+	let descendants: TreeNode[] = [];
+
+	if (!nodeArg) {
+		// No node specified — start from root
+		startNode = result.trees[0]!;
+	} else {
+		// Normalize: strip trailing /spec.yaml if given a file path
+		const normalized = nodeArg
+			.replace(/\/spec\.yaml$/, '')
+			.replace(/\/+$/, '');
+		const found = findNode(result.trees, normalized);
+		if (!found) {
+			console.error(`Error: node not found: ${nodeArg}`);
+			return 1;
+		}
+		startNode = found;
+	}
+
+	// Compute ancestors and descendants based on scope
+	if (!onlyDescends) {
+		ancestors = findPrimaryAncestors(result.trees, startNode.path);
+		// Remove the start node itself from ancestors (it's included)
+		ancestors = ancestors.filter((n) => n.path !== startNode.path);
+	}
+
+	if (!onlyAncestors) {
+		descendants = primaryDescendants(startNode);
+	}
+
+	// Handle branch nodes (not on primary chain)
+	if (ancestors.length === 0 && !onlyDescends && nodeArg) {
+		// Node is a branch (小宗) — no primary ancestors
+		console.error(`Note: "${startNode.name}" is a branch node (小宗), not on the primary chain.`);
+		console.error('Use --only-descends to show its primary descendants, or `tree` to see the full tree.');
+		return 0;
+	}
+
+	console.log(formatLineage(ancestors, startNode, descendants, opts));
+	return 0;
+}
+
 export async function runInit(args: string[]): Promise<number> {
 	const positionals = getPositionalArgs(args);
 	const target = positionals[0];
@@ -912,6 +1102,15 @@ export async function runCli(argv: string[]): Promise<number> {
 			return 0;
 		}
 		return runTreeCmd(subArgs);
+	}
+
+	if (command === 'lineage') {
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadHelp('lineage'));
+			return 0;
+		}
+		return runLineage(subArgs);
 	}
 
 	if (command === 'init') {

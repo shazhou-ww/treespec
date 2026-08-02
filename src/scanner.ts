@@ -227,6 +227,40 @@ export async function scanSpecs(specsRoot: string): Promise<ScanResult> {
 	};
 }
 
+/**
+ * Find the primary chain from root(s) to a target node.
+ * Follows `primary` links only — returns [] if target is a branch (小宗).
+ */
+export function findPrimaryAncestors(trees: TreeNode[], targetPath: string): TreeNode[] {
+	const normalized = toPosix(targetPath).replace(/\/+$/, '');
+	const chain: TreeNode[] = [];
+	function walk(node: TreeNode): boolean {
+		chain.push(node);
+		if (node.path === normalized) return true;
+		if (node.primary && walk(node.primary)) return true;
+		chain.pop();
+		return false;
+	}
+	for (const tree of trees) {
+		if (walk(tree)) return chain;
+	}
+	return [];
+}
+
+/**
+ * Follow `primary` children from a node to leaf.
+ * Returns the descendant chain (NOT including the starting node).
+ */
+export function primaryDescendants(node: TreeNode): TreeNode[] {
+	const chain: TreeNode[] = [];
+	let current = node.primary;
+	while (current) {
+		chain.push(current);
+		current = current.primary;
+	}
+	return chain;
+}
+
 /** Count nodes in a forest. */
 export function countNodes(trees: TreeNode[]): number {
 	let count = 0;
