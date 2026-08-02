@@ -526,11 +526,11 @@ export async function runRun(args: string[]): Promise<number> {
 			writeTrace,
 			trace,
 			llm,
-			baseImage: baseTag,
-			projectDir: resolve(configDir, config.projectDir ?? '.'),
-			specRelative: config.spec,
-			noMount,
-			network: config.docker?.network,
+		baseImage: baseTag,
+		projectDir: resolve(configDir, config.projectDir ?? '.'),
+		specRelative: config.spec,
+		noMount,
+		network: config.docker?.network,
 			extraHosts: config.docker?.extra_hosts,
 			onNode: ({ node, result, depth }) => {
 				const pad = '  '.repeat(depth);

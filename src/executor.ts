@@ -31,8 +31,8 @@ export interface CreateContainerOptions {
 	 */
 	workdir?: string;
 	/**
-	 * When true, project is already in the image (baked via COPY).
-	 * Skip the bind mount; WorkingDir still resolves to /app/...
+	 * When true, skip bind mount (project is in committed image, not on host).
+	 * Used by inner `treespec run` calls that run inside containers.
 	 */
 	noMount?: boolean;
 	/** Docker network mode (e.g. "host", "bridge"). */
@@ -135,9 +135,13 @@ export async function createAndStartContainer(
 
 	const binds: string[] = [];
 
-	// Mount projectDir at /app:ro (skip for noMount / DinD)
-	if (!options.noMount && options.projectDir) {
-		binds.push(`${options.projectDir}:/app:ro`);
+	// Mount projectDir at /app:ro.
+	// When running inside a container (DooD), HOST_PROJECT_DIR env var
+	// provides the host-side path (container's projectDir is /app, not a host path).
+	// When noMount is true (inner runs), skip — project is in committed image.
+	const mountSource = process.env.HOST_PROJECT_DIR || options.projectDir;
+	if (!options.noMount && mountSource) {
+		binds.push(`${mountSource}:/app:ro`);
 	}
 
 	// WorkingDir: /app/<specRelative>/<workdir>

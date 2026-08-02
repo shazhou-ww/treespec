@@ -16,9 +16,9 @@ Options:
                          Dir: trace-<timestamp>.jsonl inside
                          File: used directly (no timestamp)
   --no-trace            Skip writing trace JSONL
-  --no-mount            Child containers skip bind mount (for DinD self-test).
-                         Tool (dist/node_modules) is in the image via COPY;
-                         project data (spec/treespec.yaml) still mounted by outer run.
+  --no-mount            Skip bind mount (for inner treespec run inside containers).
+                         Project is in committed image, not on host.
+                         Outer runs use HOST_PROJECT_DIR env var instead.
   --keep-tags           Keep ephemeral image tags after run
   --verbose, -v         Show full step output in terminal
   -h, --help            Show this help
@@ -233,11 +233,9 @@ Pitfalls:
 3. --image overrides image.dockerfile in config. --rebuild requires dockerfile.
    Don't use --rebuild with --image.
 
-4. --no-mount is for self-testing (Docker-in-Docker). Child containers skip
-   the project bind mount and rely on tool files (dist, node_modules, help)
-   baked into the image via COPY. The outer `docker run` still mounts the
-   project dir for treespec.yaml + spec/. Children inherit the tool through
-   docker commit and create test projects under /tmp/.
+4. --no-mount is for inner `treespec run` calls inside containers (where
+   project data is in committed image, not on host). For outer DooD runs,
+   pass HOST_PROJECT_DIR env var instead: `docker run -e HOST_PROJECT_DIR=$(pwd)`.
 
 5. Timeout is per-step. wait.timeout is total polling time (can exceed step timeout).
 

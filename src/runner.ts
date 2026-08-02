@@ -44,7 +44,7 @@ export interface RunConfig {
 	llm?: LlmConfig;
 	/** Base image tag (written into trace meta). */
 	baseImage?: string;
-	/** When true, project is in the image — skip bind mount. */
+	/** When true, skip bind mount (for inner runs inside containers). */
 	noMount?: boolean;
 	/** Docker network mode (e.g. "host", "bridge"). */
 	network?: string;
@@ -410,13 +410,13 @@ export async function runTree(
 		if (needsContainer) {
 			containerId = await createAndStartContainer(parentTag, {
 				env,
-				projectDir: config.projectDir,
-				specRelative: config.specRelative,
-				workdir: node.path,
-				noMount: config.noMount,
-				network: config.network,
-				extraHosts: config.extraHosts,
-			});
+			projectDir: config.projectDir,
+			specRelative: config.specRelative,
+			workdir: node.path,
+			noMount: config.noMount,
+			network: config.network,
+			extraHosts: config.extraHosts,
+		});
 		}
 
 		// ── Steps ────────────────────────────────────────────────────
@@ -461,15 +461,15 @@ export async function runTree(
 			for (const postcon of spec.postcon!) {
 				let postconId: string | undefined;
 				try {
-					postconId = await createAndStartContainer(ephemeralTag, {
-						env,
-						projectDir: config.projectDir,
-						specRelative: config.specRelative,
-						workdir: node.path,
-						noMount: config.noMount,
-						network: config.network,
-						extraHosts: config.extraHosts,
-					});
+				postconId = await createAndStartContainer(ephemeralTag, {
+					env,
+			projectDir: config.projectDir,
+			specRelative: config.specRelative,
+			workdir: node.path,
+			noMount: config.noMount,
+			network: config.network,
+			extraHosts: config.extraHosts,
+		});
 					const postconSpec: Spec = {
 						description: `${spec.description ?? node.path} / postcon ${postcon.name}`,
 						steps: postcon.steps,

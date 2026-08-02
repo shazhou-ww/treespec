@@ -1,55 +1,26 @@
 description: "show lineage of the primary path"
 steps:
   - type: exec
-    command: |
-      rm -rf /tmp/lineage-test && mkdir -p /tmp/lineage-test/spec/parent/child
-      cat > /tmp/lineage-test/treespec.yaml << 'CFG'
-      name: lineage-test
-      spec: spec
-      CFG
-      cat > /tmp/lineage-test/spec/spec.yaml << 'CFG'
-      description: "root"
-      steps: []
-      primary: parent
-      CFG
-      cat > /tmp/lineage-test/spec/parent/spec.yaml << 'CFG'
-      description: "parent node"
-      steps:
-        - type: exec
-          command: "echo parent"
-      primary: child
-      CFG
-      cat > /tmp/lineage-test/spec/parent/child/spec.yaml << 'CFG'
-      description: "child node"
-      steps:
-        - type: exec
-          command: "echo child"
-      CFG
+    command: "treespec lineage --config /app/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:
+        - { path: "stdout", regex: "bootstrap" }
+        - { path: "stdout", regex: "add-specs" }
+        - { path: "stdout", regex: "run-all" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "treespec lineage --config /tmp/lineage-test/treespec.yaml 2>&1"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "root" }
-        - { path: "stdout", regex: "parent node" }
-        - { path: "stdout", regex: "child node" }
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    command: "treespec lineage parent --config /tmp/lineage-test/treespec.yaml --only-ancestors 2>&1"
+    command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-ancestors 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "← here" }
-        - { path: "stdout", regex: "root" }
+        - { path: "stdout", regex: "bootstrap" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "treespec lineage parent --config /tmp/lineage-test/treespec.yaml --only-descends 2>&1"
+    command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-descends 2>&1"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "child node" }
+        - { path: "stdout", regex: "run-all" }
         - { path: "exit_code", regex: "^0$" }

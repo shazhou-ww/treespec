@@ -41,9 +41,7 @@ Common flags:
   --output <path>      Output path (dir → timestamped, .jsonl → exact file)
   --no-trace           Skip trace JSONL output
   --verbose, -v        Show full step output
-  --no-mount           Skip bind mount in child containers (DinD self-test).
-                         Tool files baked into image; project data still
-                         mounted by outer run.
+  --no-mount           Skip bind mount (inner runs where project is in image)
   --keep-tags          Keep ephemeral tags after run (debug)
   --rebuild            Force rebuild base image
 

@@ -2,14 +2,7 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Bake the tool itself (dist, deps, help docs) into the image so child containers
-# created via `docker commit` can run `treespec` even with --no-mount.
-# Project data (spec/, treespec.yaml, source) is NOT included — mounted at runtime.
-COPY dist/ ./dist/
-COPY node_modules/ ./node_modules/
-COPY package.json ./
-COPY help/ ./help/
-
+# Pure runtime: project source, node_modules, and dist are mounted from host.
 # Add node_modules/.bin to PATH so project dependencies' CLIs are directly callable.
 ENV PATH="/app/node_modules/.bin:$PATH"
 
