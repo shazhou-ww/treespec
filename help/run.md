@@ -16,9 +16,6 @@ Options:
                          Dir: trace-<timestamp>.jsonl inside
                          File: used directly (no timestamp)
   --no-trace            Skip writing trace JSONL
-  --no-mount            Skip bind mount (for inner treespec run inside containers).
-                         Project is in committed image, not on host.
-                         Outer runs use HOST_PROJECT_DIR env var instead.
   --keep-tags           Keep ephemeral image tags after run
   --verbose, -v         Show full step output in terminal
   -h, --help            Show this help
@@ -233,14 +230,12 @@ Pitfalls:
 3. --image overrides image.dockerfile in config. --rebuild requires dockerfile.
    Don't use --rebuild with --image.
 
-4. --no-mount is for inner `treespec run` calls inside containers (where
-   project data is in committed image, not on host). For outer DooD runs,
-   pass HOST_PROJECT_DIR env var instead: `docker run -e HOST_PROJECT_DIR=$(pwd)`.
 
-5. Timeout is per-step. wait.timeout is total polling time (can exceed step timeout).
 
-6. Organizational nodes (no spec.yaml) pass through parent's tag unchanged.
+4. Timeout is per-step. wait.timeout is total polling time (can exceed step timeout).
+
+5. Organizational nodes (no spec.yaml) pass through parent's tag unchanged.
    They don't execute or commit — just a grouping mechanism.
 
-7. assets/ is ALWAYS skipped, even if it contains spec.yaml files.
+6. assets/ is ALWAYS skipped, even if it contains spec.yaml files.
    Don't put active test specs in assets/ — they're fixture data.

@@ -213,8 +213,8 @@ project/
 
 **DooD 运行模式**：当 `treespec run` 在容器内执行时（如自测），通过 `HOST_PROJECT_DIR`
 环境变量传递宿主机项目路径，子容器 bind mount 使用该路径。
-内层 `treespec run`（在 spec step 中调用）使用 `--no-mount` 跳过 bind mount，
-因为其项目数据在 committed image 中，不在宿主机上。
+内层 `treespec run`（在 spec step 中调用）自动检测：在容器内且无 `HOST_PROJECT_DIR`
+时跳过 bind mount（项目数据在 committed image 中）。
 
 ```bash
 # 宿主机直接跑

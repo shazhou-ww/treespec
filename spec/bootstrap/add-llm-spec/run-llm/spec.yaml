@@ -3,7 +3,7 @@ env:
   - TREESPEC_LLM_API_KEY
 steps:
   - type: exec
-    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml llm-assert --no-mount --no-trace --rebuild 2>&1"
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml llm-assert --no-trace --rebuild 2>&1"
     assert:
       type: regex
       conditions:

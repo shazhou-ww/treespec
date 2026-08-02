@@ -405,7 +405,6 @@ export async function runRun(args: string[]): Promise<number> {
 	const keepTags = hasFlag(args, '--keep-tags');
 	const verbose = hasFlag(args, '--verbose') || hasFlag(args, '-v');
 	const noTrace = hasFlag(args, '--no-trace');
-	const noMount = hasFlag(args, '--no-mount');
 	const envFileFlag = getFlagValue(args, '--env-file');
 	const outputFlag = getFlagValue(args, '--output');
 	const imageFlag = getFlagValue(args, '--image');
@@ -529,7 +528,6 @@ export async function runRun(args: string[]): Promise<number> {
 		baseImage: baseTag,
 		projectDir: resolve(configDir, config.projectDir ?? '.'),
 		specRelative: config.spec,
-		noMount,
 		network: config.docker?.network,
 			extraHosts: config.docker?.extra_hosts,
 			onNode: ({ node, result, depth }) => {

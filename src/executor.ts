@@ -3,6 +3,7 @@
  */
 
 import { PassThrough } from 'node:stream';
+import { existsSync } from 'node:fs';
 import Docker from 'dockerode';
 
 export interface ExecResult {
@@ -30,11 +31,6 @@ export interface CreateContainerOptions {
 	 * Becomes WorkingDir `/app/<specRelative>/<workdir>`.
 	 */
 	workdir?: string;
-	/**
-	 * When true, skip bind mount (project is in committed image, not on host).
-	 * Used by inner `treespec run` calls that run inside containers.
-	 */
-	noMount?: boolean;
 	/** Docker network mode (e.g. "host", "bridge"). */
 	network?: string;
 	/** Extra host entries (same format as docker --add-host). */
@@ -136,11 +132,10 @@ export async function createAndStartContainer(
 	const binds: string[] = [];
 
 	// Mount projectDir at /app:ro.
-	// When running inside a container (DooD), HOST_PROJECT_DIR env var
-	// provides the host-side path (container's projectDir is /app, not a host path).
-	// When noMount is true (inner runs), skip — project is in committed image.
+	// Auto-detect: in container without HOST_PROJECT_DIR → skip (project in committed image).
+	const inContainer = existsSync('/.dockerenv');
 	const mountSource = process.env.HOST_PROJECT_DIR || options.projectDir;
-	if (!options.noMount && mountSource) {
+	if (mountSource && (!inContainer || process.env.HOST_PROJECT_DIR)) {
 		binds.push(`${mountSource}:/app:ro`);
 	}
 

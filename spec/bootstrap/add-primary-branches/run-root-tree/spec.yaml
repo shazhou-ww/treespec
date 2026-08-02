@@ -22,7 +22,7 @@ steps:
         - { path: "stdout", regex: "root" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "treespec tree --config /tmp/root-tree-test/treespec.yaml --no-mount 2>&1"
+    command: "treespec tree --config /tmp/root-tree-test/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:

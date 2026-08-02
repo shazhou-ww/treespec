@@ -42,7 +42,7 @@ steps:
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "treespec run --config /tmp/clean-test/treespec.yaml parent --no-mount --keep-tags --rebuild 2>&1"
+    command: "treespec run --config /tmp/clean-test/treespec.yaml parent --keep-tags --rebuild 2>&1"
     assert:
       type: regex
       conditions:

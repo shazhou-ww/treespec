@@ -1,7 +1,7 @@
 description: "run all specs — expect 3 passed and 2 failed"
 steps:
   - type: exec
-    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml --no-mount --no-trace --rebuild 2>&1; true"
+    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml --no-trace --rebuild 2>&1; true"
     assert:
       type: regex
       conditions:

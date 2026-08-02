@@ -1,7 +1,7 @@
 description: "run with trace enabled, then show it"
 steps:
   - type: exec
-    command: "rm -rf /tmp/bootstrap-trace && treespec run --config /tmp/bootstrap-project/treespec.yaml --no-mount --rebuild --output /tmp/bootstrap-trace/trace.jsonl 2>&1; true"
+    command: "rm -rf /tmp/bootstrap-trace && treespec run --config /tmp/bootstrap-project/treespec.yaml --rebuild --output /tmp/bootstrap-trace/trace.jsonl 2>&1; true"
     assert:
       type: regex
       conditions:

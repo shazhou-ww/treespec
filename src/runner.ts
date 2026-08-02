@@ -44,8 +44,6 @@ export interface RunConfig {
 	llm?: LlmConfig;
 	/** Base image tag (written into trace meta). */
 	baseImage?: string;
-	/** When true, skip bind mount (for inner runs inside containers). */
-	noMount?: boolean;
 	/** Docker network mode (e.g. "host", "bridge"). */
 	network?: string;
 	/** Extra host entries (same format as docker --add-host). */
@@ -413,7 +411,6 @@ export async function runTree(
 			projectDir: config.projectDir,
 			specRelative: config.specRelative,
 			workdir: node.path,
-			noMount: config.noMount,
 			network: config.network,
 			extraHosts: config.extraHosts,
 		});
@@ -466,7 +463,6 @@ export async function runTree(
 			projectDir: config.projectDir,
 			specRelative: config.specRelative,
 			workdir: node.path,
-			noMount: config.noMount,
 			network: config.network,
 			extraHosts: config.extraHosts,
 		});
