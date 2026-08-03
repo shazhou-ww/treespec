@@ -4,3 +4,5 @@ steps:
     description: "copy broken spec into project"
     command: "cp -r /app/spec/assets/spec/broken-spec /workspace/greeting/spec/"
 primary: validate-rejects
+branches:
+  - run-rejects
