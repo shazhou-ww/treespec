@@ -1,0 +1,4 @@
+description: "greet CLI tests"
+primary: with-name
+branches:
+  - no-name

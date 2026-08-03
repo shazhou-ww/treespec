@@ -5,8 +5,10 @@ steps:
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "echo-hello" }
-        - { path: "stdout", regex: "fail-case" }
-        - { path: "stdout", regex: "http-get" }
-        - { path: "stdout", regex: "http-fail" }
+        - { path: "stdout", regex: "greet" }
+        - { path: "stdout", regex: "with-name" }
+        - { path: "stdout", regex: "no-name" }
+        - { path: "stdout", regex: "http" }
+        - { path: "stdout", regex: "get-ok" }
+        - { path: "stdout", regex: "get-fail" }
         - { path: "exit_code", regex: "^0$" }

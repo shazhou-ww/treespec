@@ -1,25 +1,7 @@
 description: "add passing and failing specs (exec + http step types)"
 steps:
   - type: exec
-    command: "cp -r /app/spec/assets/specs/echo-hello /workspace/bootstrap-project/spec/echo-hello"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    command: "cp -r /app/spec/assets/specs/fail-case /workspace/bootstrap-project/spec/fail-case"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    command: "cp -r /app/spec/assets/specs/http-get /workspace/bootstrap-project/spec/http-get"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    command: "cp -r /app/spec/assets/specs/http-fail /workspace/bootstrap-project/spec/http-fail"
+    command: "cp -r /app/spec/assets/specs/greet /workspace/bootstrap-project/spec/greet && cp -r /app/spec/assets/specs/http /workspace/bootstrap-project/spec/http"
     assert:
       type: regex
       conditions:

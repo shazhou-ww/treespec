@@ -6,6 +6,6 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "Valid" }
-        - { path: "stdout", regex: "echo-hello" }
-        - { path: "stdout", regex: "http-get" }
+        - { path: "stdout", regex: "greet" }
+        - { path: "stdout", regex: "http" }
         - { path: "exit_code", regex: "^0$" }

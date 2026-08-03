@@ -1,0 +1,4 @@
+description: "greet HTTP tests"
+primary: get-ok
+branches:
+  - get-fail
