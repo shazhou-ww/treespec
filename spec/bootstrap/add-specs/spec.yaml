@@ -1,78 +1,29 @@
 description: "add passing and failing specs (exec + http step types)"
 steps:
   - type: exec
-    command: |
-      mkdir -p /tmp/bootstrap-project/spec/echo-hello
-      cat > /tmp/bootstrap-project/spec/echo-hello/spec.yaml << 'SPEC'
-      description: "exec passing"
-      steps:
-        - type: exec
-          command: "echo hello"
-          assert:
-            type: regex
-            conditions:
-              - { path: "stdout", regex: "hello" }
-      SPEC
+    command: "cp -r /app/spec/assets/specs/echo-hello /workspace/bootstrap-project/spec/echo-hello"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: |
-      mkdir -p /tmp/bootstrap-project/spec/fail-case
-      cat > /tmp/bootstrap-project/spec/fail-case/spec.yaml << 'SPEC'
-      description: "exec failing"
-      steps:
-        - type: exec
-          command: "exit 1"
-          assert:
-            type: regex
-            conditions:
-              - { path: "exit_code", regex: "^0$" }
-      SPEC
+    command: "cp -r /app/spec/assets/specs/fail-case /workspace/bootstrap-project/spec/fail-case"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: |
-      mkdir -p /tmp/bootstrap-project/spec/http-get
-      cat > /tmp/bootstrap-project/spec/http-get/spec.yaml << 'SPEC'
-      description: "http passing"
-      steps:
-        - type: http
-          request:
-            method: GET
-            url: "https://httpbingo.org/get"
-          assert:
-            type: regex
-            conditions:
-              - { path: "status", regex: "^200$" }
-      SPEC
+    command: "cp -r /app/spec/assets/specs/http-get /workspace/bootstrap-project/spec/http-get"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: |
-      mkdir -p /tmp/bootstrap-project/spec/http-fail
-      cat > /tmp/bootstrap-project/spec/http-fail/spec.yaml << 'SPEC'
-      description: "http failing"
-      steps:
-        - type: http
-          request:
-            method: GET
-            url: "https://httpbingo.org/get"
-          assert:
-            type: regex
-            conditions:
-              - { path: "status", regex: "^999$" }
-      SPEC
+    command: "cp -r /app/spec/assets/specs/http-fail /workspace/bootstrap-project/spec/http-fail"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-
 primary: run-all
 branches:
   - run-subset

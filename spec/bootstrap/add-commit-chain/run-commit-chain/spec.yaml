@@ -1,7 +1,7 @@
 description: "run commit chain — expect 2 passed"
 steps:
   - type: exec
-    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml write-state --no-trace --rebuild 2>&1"
+    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml write-state --no-trace --rebuild 2>&1"
     assert:
       type: regex
       conditions:

@@ -1,7 +1,7 @@
 description: "run with trace enabled, then show it"
 steps:
   - type: exec
-    command: "rm -rf /tmp/bootstrap-trace && treespec run --config /tmp/bootstrap-project/treespec.yaml --rebuild --output /tmp/bootstrap-trace/trace.jsonl 2>&1; true"
+    command: "rm -rf /workspace/bootstrap-trace && treespec run --config /workspace/bootstrap-project/treespec.yaml --rebuild --output /workspace/bootstrap-trace/trace.jsonl 2>&1; true"
     assert:
       type: regex
       conditions:
@@ -9,7 +9,7 @@ steps:
         - { path: "stdout", regex: "bootstrap-trace" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "test -f /tmp/bootstrap-trace/trace.jsonl && treespec show /tmp/bootstrap-trace/trace.jsonl 2>&1"
+    command: "test -f /workspace/bootstrap-trace/trace.jsonl && treespec show /workspace/bootstrap-trace/trace.jsonl 2>&1"
     assert:
       type: regex
       conditions:

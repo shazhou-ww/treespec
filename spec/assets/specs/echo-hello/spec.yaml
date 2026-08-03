@@ -1,0 +1,8 @@
+description: "greet with a name"
+steps:
+  - type: exec
+    command: "greet --name Alice"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Hello, Alice" }

@@ -2,15 +2,15 @@ description: "add pruning fixture — parent fails, child should skip"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/spec/prune-parent/prune-child
-      cat > /tmp/bootstrap-project/spec/prune-parent/spec.yaml << 'SPEC'
+      mkdir -p /workspace/bootstrap-project/spec/prune-parent/prune-child
+      cat > /workspace/bootstrap-project/spec/prune-parent/spec.yaml << 'SPEC'
       description: "intentional failure"
       steps:
         - type: exec
           command: "exit 1"
       primary: prune-child
       SPEC
-      cat > /tmp/bootstrap-project/spec/prune-parent/prune-child/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/prune-parent/prune-child/spec.yaml << 'SPEC'
       description: "should be skipped when parent fails"
       steps:
         - type: exec

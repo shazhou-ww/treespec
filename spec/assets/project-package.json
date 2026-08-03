@@ -1,0 +1,8 @@
+{
+  "name": "bootstrap-project",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "greet": "file:./sut"
+  }
+}

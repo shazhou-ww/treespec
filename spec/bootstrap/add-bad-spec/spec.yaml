@@ -2,8 +2,8 @@ description: "add a spec with invalid assertion type"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/spec/broken-spec
-      cat > /tmp/bootstrap-project/spec/broken-spec/spec.yaml << 'SPEC'
+      mkdir -p /workspace/bootstrap-project/spec/broken-spec
+      cat > /workspace/bootstrap-project/spec/broken-spec/spec.yaml << 'SPEC'
       description: "broken spec with invalid assert"
       steps:
         - type: exec

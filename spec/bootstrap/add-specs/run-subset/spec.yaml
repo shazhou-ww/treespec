@@ -1,7 +1,7 @@
 description: "run a single spec by path"
 steps:
   - type: exec
-    command: "treespec run --config /tmp/bootstrap-project/treespec.yaml echo-hello --no-trace 2>&1"
+    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml echo-hello --no-trace 2>&1"
     assert:
       type: regex
       conditions:

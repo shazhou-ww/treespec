@@ -1,7 +1,7 @@
 description: "show tree after specs are added"
 steps:
   - type: exec
-    command: "treespec tree --config /tmp/bootstrap-project/treespec.yaml 2>&1"
+    command: "treespec tree --config /workspace/bootstrap-project/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:

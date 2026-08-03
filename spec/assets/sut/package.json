@@ -1,0 +1,7 @@
+{
+  "name": "greet",
+  "version": "1.0.0",
+  "bin": {
+    "greet": "./src/index.js"
+  }
+}

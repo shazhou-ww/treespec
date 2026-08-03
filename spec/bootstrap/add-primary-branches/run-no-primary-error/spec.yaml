@@ -2,8 +2,8 @@ description: "verify error when branches declared without primary"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/spec/no-primary-demo/child-a
-      cat > /tmp/bootstrap-project/spec/no-primary-demo/spec.yaml << 'SPEC'
+      mkdir -p /workspace/bootstrap-project/spec/no-primary-demo/child-a
+      cat > /workspace/bootstrap-project/spec/no-primary-demo/spec.yaml << 'SPEC'
       description: "branches without primary"
       steps:
         - type: exec
@@ -11,13 +11,13 @@ steps:
       branches:
         - child-a
       SPEC
-      cat > /tmp/bootstrap-project/spec/no-primary-demo/child-a/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/no-primary-demo/child-a/spec.yaml << 'SPEC'
       description: "child a"
       steps:
         - type: exec
           command: "echo child-a"
       SPEC
-      treespec validate --config /tmp/bootstrap-project/treespec.yaml 2>&1; [ $? -ne 0 ]
+      treespec validate --config /workspace/bootstrap-project/treespec.yaml 2>&1; [ $? -ne 0 ]
     assert:
       type: regex
       conditions:

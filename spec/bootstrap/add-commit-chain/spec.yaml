@@ -2,8 +2,8 @@ description: "add commit chain specs — parent writes, child reads"
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/spec/write-state/read-state
-      cat > /tmp/bootstrap-project/spec/write-state/spec.yaml << 'SPEC'
+      mkdir -p /workspace/bootstrap-project/spec/write-state/read-state
+      cat > /workspace/bootstrap-project/spec/write-state/spec.yaml << 'SPEC'
       description: "write state for children to inherit"
       steps:
         - type: exec
@@ -23,7 +23,7 @@ steps:
                   - { path: "stdout", regex: "parent-data" }
       primary: read-state
       SPEC
-      cat > /tmp/bootstrap-project/spec/write-state/read-state/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/write-state/read-state/spec.yaml << 'SPEC'
       description: "read parent committed state"
       steps:
         - type: exec

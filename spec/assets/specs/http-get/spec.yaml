@@ -1,0 +1,10 @@
+description: "http passing"
+steps:
+  - type: http
+    request:
+      method: GET
+      url: "https://httpbingo.org/get"
+    assert:
+      type: regex
+      conditions:
+        - { path: "status", regex: "^200$" }

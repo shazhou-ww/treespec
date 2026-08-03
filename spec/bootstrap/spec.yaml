@@ -1,7 +1,7 @@
-description: "init a treespec project and prepare Dockerfile for DinD"
+description: "init a treespec project and install SUT (greet CLI)"
 steps:
   - type: exec
-    command: "rm -rf /tmp/bootstrap-project && treespec init /tmp/bootstrap-project --name bootstrap 2>&1"
+    command: "rm -rf /workspace/bootstrap-project && treespec init /workspace/bootstrap-project --name bootstrap 2>&1"
     assert:
       type: regex
       conditions:
@@ -9,19 +9,24 @@ steps:
         - { path: "stdout", regex: "bootstrap" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "printf 'FROM node:22-alpine\\n' > /tmp/bootstrap-project/spec/Dockerfile"
+    command: "cp -r /app/spec/assets/sut /workspace/bootstrap-project/sut && cp /app/spec/assets/project-package.json /workspace/bootstrap-project/package.json"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: "test -f /tmp/bootstrap-project/treespec.yaml && test -f /tmp/bootstrap-project/spec/Dockerfile && test -f /tmp/bootstrap-project/spec/example/spec.yaml && echo ok"
+    command: "cd /workspace/bootstrap-project && npm install 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    command: "test -f /workspace/bootstrap-project/treespec.yaml && test -f /workspace/bootstrap-project/spec/Dockerfile && test -f /workspace/bootstrap-project/node_modules/.bin/greet && echo ok"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "ok" }
         - { path: "exit_code", regex: "^0$" }
-
 primary: add-specs
 branches:
   - add-bad-spec

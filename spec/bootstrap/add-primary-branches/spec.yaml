@@ -2,10 +2,10 @@ description: "add primary/branches test specs — verify explicit child discover
 steps:
   - type: exec
     command: |
-      mkdir -p /tmp/bootstrap-project/spec/primary-demo/primary-child/leaf-a
-      mkdir -p /tmp/bootstrap-project/spec/primary-demo/branch-b/leaf-b
-      mkdir -p /tmp/bootstrap-project/spec/primary-demo/branch-c
-      cat > /tmp/bootstrap-project/spec/primary-demo/spec.yaml << 'SPEC'
+      mkdir -p /workspace/bootstrap-project/spec/primary-demo/primary-child/leaf-a
+      mkdir -p /workspace/bootstrap-project/spec/primary-demo/branch-b/leaf-b
+      mkdir -p /workspace/bootstrap-project/spec/primary-demo/branch-c
+      cat > /workspace/bootstrap-project/spec/primary-demo/spec.yaml << 'SPEC'
       description: "primary demo root"
       steps:
         - type: exec
@@ -19,7 +19,7 @@ steps:
         - branch-b
         - branch-c
       SPEC
-      cat > /tmp/bootstrap-project/spec/primary-demo/primary-child/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/primary-demo/primary-child/spec.yaml << 'SPEC'
       description: "primary child — main line continuation"
       steps:
         - type: exec
@@ -30,7 +30,7 @@ steps:
               - { path: "stdout", regex: "primary" }
       primary: leaf-a
       SPEC
-      cat > /tmp/bootstrap-project/spec/primary-demo/primary-child/leaf-a/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/primary-demo/primary-child/leaf-a/spec.yaml << 'SPEC'
       description: "leaf on main line"
       steps:
         - type: exec
@@ -40,7 +40,7 @@ steps:
             conditions:
               - { path: "stdout", regex: "leaf-a" }
       SPEC
-      cat > /tmp/bootstrap-project/spec/primary-demo/branch-b/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/primary-demo/branch-b/spec.yaml << 'SPEC'
       description: "branch b"
       steps:
         - type: exec
@@ -51,7 +51,7 @@ steps:
               - { path: "stdout", regex: "branch-b" }
       primary: leaf-b
       SPEC
-      cat > /tmp/bootstrap-project/spec/primary-demo/branch-b/leaf-b/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/primary-demo/branch-b/leaf-b/spec.yaml << 'SPEC'
       description: "leaf under branch b"
       steps:
         - type: exec
@@ -61,7 +61,7 @@ steps:
             conditions:
               - { path: "stdout", regex: "leaf-b" }
       SPEC
-      cat > /tmp/bootstrap-project/spec/primary-demo/branch-c/spec.yaml << 'SPEC'
+      cat > /workspace/bootstrap-project/spec/primary-demo/branch-c/spec.yaml << 'SPEC'
       description: "branch c — leaf node"
       steps:
         - type: exec
