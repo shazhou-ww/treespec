@@ -7,5 +7,5 @@ steps:
       conditions:
         - { path: "stdout", regex: "Valid" }
         - { path: "stdout", regex: "greet" }
-        - { path: "stdout", regex: "http" }
+        - { path: "stdout", regex: "configure" }
         - { path: "exit_code", regex: "^0$" }

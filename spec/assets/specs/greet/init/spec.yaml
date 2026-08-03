@@ -1,0 +1,10 @@
+description: "greet init — create state file"
+steps:
+  - type: exec
+    command: "greet init"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "initialized" }
+        - { path: "exit_code", regex: "^0$" }
+primary: configure

@@ -1,0 +1,9 @@
+description: "greet reads state — expect Hello, Alice!"
+steps:
+  - type: exec
+    command: "greet"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "Hello, Alice" }
+        - { path: "exit_code", regex: "^0$" }

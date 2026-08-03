@@ -1,7 +1,7 @@
-description: "add passing and failing specs (exec + http step types)"
+description: "add greet spec tree with state-dependent structure"
 steps:
   - type: exec
-    command: "cp -r /app/spec/assets/specs/greet /workspace/bootstrap-project/spec/greet && cp -r /app/spec/assets/specs/http /workspace/bootstrap-project/spec/http"
+    command: "cp -r /app/spec/assets/specs/greet /workspace/bootstrap-project/spec/greet"
     assert:
       type: regex
       conditions:

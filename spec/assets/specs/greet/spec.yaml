@@ -1,4 +1,2 @@
-description: "greet CLI tests"
-primary: with-name
-branches:
-  - no-name
+description: "greet CLI tests — state-dependent tree"
+primary: init

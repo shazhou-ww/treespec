@@ -1,8 +1,0 @@
-description: "greet with empty name fails"
-steps:
-  - type: exec
-    command: "greet --name ''"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }

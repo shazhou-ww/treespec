@@ -6,9 +6,9 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "greet" }
-        - { path: "stdout", regex: "with-name" }
-        - { path: "stdout", regex: "no-name" }
-        - { path: "stdout", regex: "http" }
-        - { path: "stdout", regex: "get-ok" }
-        - { path: "stdout", regex: "get-fail" }
+        - { path: "stdout", regex: "init" }
+        - { path: "stdout", regex: "configure" }
+        - { path: "stdout", regex: "verify" }
+        - { path: "stdout", regex: "set-empty" }
+        - { path: "stdout", regex: "serve" }
         - { path: "exit_code", regex: "^0$" }
