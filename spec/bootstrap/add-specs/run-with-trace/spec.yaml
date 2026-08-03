@@ -2,7 +2,9 @@ description: "run with trace enabled, then show it"
 steps:
   - type: exec
     description: "run with trace output"
-    command: "rm -rf /workspace/greeting-trace && treespec run --config /workspace/greeting/treespec.yaml --rebuild --output /workspace/greeting-trace/trace.jsonl 2>&1; true"
+    command: |
+      rm -rf /workspace/greeting-trace &&
+      treespec run --config /workspace/greeting/treespec.yaml --rebuild --output /workspace/greeting-trace/trace.jsonl 2>&1; true
     assert:
       type: regex
       conditions:
@@ -10,7 +12,9 @@ steps:
         - { path: "stdout", regex: "greeting-trace" }
   - type: exec
     description: "verify trace file and show"
-    command: "test -f /workspace/greeting-trace/trace.jsonl && treespec show /workspace/greeting-trace/trace.jsonl 2>&1"
+    command: |
+      test -f /workspace/greeting-trace/trace.jsonl &&
+      treespec show /workspace/greeting-trace/trace.jsonl 2>&1
     assert:
       type: regex
       conditions:

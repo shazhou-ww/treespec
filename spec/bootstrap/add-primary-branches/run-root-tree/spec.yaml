@@ -2,7 +2,12 @@ description: "verify root spec.yaml creates a single tree (Roots: 1)"
 steps:
   - type: exec
     description: "init root-tree-test project"
-    command: "rm -rf /workspace/root-tree-test && treespec init /workspace/root-tree-test --name root-tree-test 2>&1 && cp /app/spec/assets/spec/root-spec/spec.yaml /workspace/root-tree-test/spec/spec.yaml"
+    command: |
+      rm -rf /workspace/root-tree-test &&
+      treespec init /workspace/root-tree-test --name root-tree-test 2>&1
+  - type: exec
+    description: "copy root spec.yaml into project"
+    command: "cp /app/spec/assets/spec/root-spec/spec.yaml /workspace/root-tree-test/spec/spec.yaml"
   - type: exec
     description: "validate empty project"
     command: "treespec validate --config /workspace/root-tree-test/treespec.yaml 2>&1"

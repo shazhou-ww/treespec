@@ -2,7 +2,9 @@ description: "init project, run parent-child with --keep-tags, then clean remove
 steps:
   - type: exec
     description: "init clean-test project"
-    command: "rm -rf /workspace/clean-test && treespec init /workspace/clean-test --name clean-test 2>&1"
+    command: |
+      rm -rf /workspace/clean-test &&
+      treespec init /workspace/clean-test --name clean-test 2>&1
     assert:
       type: regex
       conditions:
