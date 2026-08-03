@@ -36,7 +36,7 @@ add-persona/
 
 ### 🔍 程序化 & LLM 断言
 
-支持三种断言方式，各擅胜场：
+支持四种断言方式，各擅胜场：
 
 ```yaml
 # regex — 简单模式匹配
@@ -50,12 +50,18 @@ assert:
   type: jsonata
   expression: "$count(providers[name='openrouter']) = 1"
 
+# exit_code — 退出码检查
+assert:
+  type: exit_code
+  equals: 0
+
 # llm — 语义判断，处理复杂输出
 assert:
   type: llm
   prompt: "输出中是否包含至少一个中文 provider 名称？"
 ```
 
+有 `assert` 的 exec step 会隐式检查 `exit_code=0`，无需在 conditions 中显式写。
 LLM 断言让 AI 充当 judge，判断输出是否符合预期语义——面对自然语言、多步骤累积上下文等场景，比硬编码模式灵活得多。
 
 ## 快速上手
@@ -106,6 +112,7 @@ treespec run spec/add-provider/      # 跑子树（自动含祖先链）
 treespec run --image myapp:latest     # 用已有 image，不 build
 treespec run --rebuild                # 强制重建 base image
 treespec tree                         # 可视化测试树结构
+treespec lineage <path>               # 查看祖先/后代链路
 treespec show <trace.jsonl>           # 回放测试结果
 treespec validate                     # 检查配置 + spec 树
 treespec clean                        # 清理临时 image tag

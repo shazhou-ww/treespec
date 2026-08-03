@@ -87,15 +87,16 @@ spec/
 ```
 spec/
   bootstrap/
-    spec.yaml                init project（一次 setup）
+    spec.yaml                init project + install SUT（一次 setup）
     validate-fresh/         validate 初始状态
-    add-specs/              添加 exec + http × pass + fail
-      validate-passes/      validate 有 case 后的状态
-      run-all/              run 全部 → 3 passed, 2 failed
+    add-specs/              一把梭 copy 所有 spec 树
+      validate/             validate 全部 specs
+      run-all/              run 全部 → pass + fail + skip
       run-with-trace/       run with trace → show trace
       show-tree/            tree 显示所有 specs
-    add-bad-spec/           broken spec（隔离子树）
-      validate-rejects/     validate → error
+      add-bad-spec/         broken spec（隔离子树）
+        validate-rejects/   validate → error
+      add-no-primary/      branches without primary → error
 ```
 
 一次 init，所有子节点共享项目状态。add-specs 一次添加所有 specs，孙节点共享 spec 文件。
@@ -207,10 +208,10 @@ broken spec 一旦混入，整条链的 validate 和 run 都受影响。
 
 ```
 bootstrap/                  ← init project
-  add-specs/                ← 主线：只加正常的 specs
-    validate-passes/        ← validate → pass ✓
+  add-specs/                ← 主线：一把梭 copy 所有正常 specs
+    validate/               ← validate → pass ✓
     run-all/                ← run → 正常执行
-  add-bad-spec/             ← 分叉：独立加 broken spec
+    add-bad-spec/           ← 分叉：独立加 broken spec
     validate-rejects/       ← validate → error ✓（预期行为）
 ```
 

@@ -144,6 +144,23 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 | 能力 | 可执行任意命令 | 可执行任意命令（包括 mutable） |
 
 每个 step 的 `assert` 是可选的——中间步骤可以只关心执行成功，不做断言。
+有 `assert` 的 exec step 会隐式检查 `exit_code=0`，无需在 conditions 中显式写。
+
+**ExecStep 字段**：
+
+| 字段 | 必需 | 说明 |
+|:-----|:-----|:-----|
+| `type` | 是 | `'exec'`（可省略，默认） |
+| `command` | 是 | Shell 命令，支持 `$ENV_VAR` 替换 |
+| `cwd` | 否 | 容器内工作目录，默认为容器 WorkingDir |
+| `description` | 否 | 人类可读描述，显示在输出中 |
+| `timeout` | 否 | 超时时间，如 `"30s"`、`"5m"`，默认 30s |
+| `assert` | 否 | 断言，省略则为 transition step（exit_code=0 = PASS） |
+| `wait` | 否 | 等待条件，轮询重试直到 PASS 或 timeout |
+
+**HttpStep**：HTTP step 在容器内部执行（通过 `node -e fetch(...)`），而非从 treespec 进程外部发起。
+这意味着 HTTP step 和 exec step 在同一网络命名空间，可直接访问容器内启动的服务（如 `localhost:9876`），
+无需 `network: host`。
 
 ### 3.3 后置条件容器
 
@@ -177,7 +194,7 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 ```dockerfile
 FROM node:22-alpine
 WORKDIR /app
-ENV PATH="/app/node_modules/.bin:$PATH"
+ENV PATH="/app/bin:/app/node_modules/.bin:$PATH"
 ```
 
 项目内容（源码、node_modules、dist、spec、treespec.yaml）全部从 mount 来。
@@ -593,10 +610,8 @@ env:
 steps:
   - type: exec
     command: "myapp model add claude-4-sonnet --provider openrouter"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
+    # exec step with assert 隐式检查 exit_code=0
+    # 省略 exit_code 条件即可
 postcon:
   - name: verify-model-listed
     steps:
@@ -635,13 +650,17 @@ Step 的 command 和 HTTP request 中可以引用环境变量，
 |:-----|:-----|:-----|
 | `regex` | `{ type: 'regex', conditions: [{ path, regex }] }` | 对指定路径的值做正则匹配 |
 | `jsonata` | `{ type: 'jsonata', expression: '...' }` | 用 JSONata 表达式断言 JSON 输出 |
+| `exit_code` | `{ type: 'exit_code', equals?: 0 }` | 检查退出码，默认 0 |
 | `llm` | `{ type: 'llm', prompt: '...' }` | 用 LLM 判定输出是否符合预期 |
 
 **regex** 的 `path` 支持：
 - `stdout` / `stderr` — 命令输出
-- `exit_code` — 退出码
+- `exit_code` — 退出码（有 assert 时隐式检查 =0，无需显式写）
 - `status` — HTTP 响应状态码
 - `body` — HTTP 响应体
+
+**隐式 exit_code 检查**：exec step 有 `assert` 时，除了检查 assert 条件，还会隐式检查 `exit_code=0`。
+省略 `assert` 的 transition step 同样隐式检查 `exit_code=0`。
 
 ### 8.4 LLM Assertion
 

@@ -95,15 +95,16 @@ Test tree design:
 
 Example (self-test bootstrap tree):
   bootstrap/
-    spec.yaml              init project
+    spec.yaml              init project + install SUT
     validate-fresh/        validate initial state
-    add-specs/             add exec+http, passing+failing
-      validate-passes/     validate after adding
-      run-all/             run → 3 passed, 2 failed
+    add-specs/             copy all spec trees at once
+      validate/            validate all specs
+      run-all/             run → expect pass + fail + skip
       run-with-trace/      run with trace → show trace
       show-tree/           tree shows all specs
-    add-bad-spec/          broken spec (isolated)
-      validate-rejects/    validate → error
+      add-bad-spec/        broken spec (isolated)
+        validate-rejects/  validate → error
+      add-no-primary/     branches without primary → error
 
 For details:
   treespec run --help       — spec format, assert types, wait, postcon, examples

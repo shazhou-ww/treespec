@@ -76,17 +76,14 @@ Examples:
 
     $ treespec lineage bootstrap/add-specs --only-descends -v
 
-    add-specs — add passing and failing specs (exec + http step types)
+    add-specs — copy all spec trees into project at once
       steps:
-        1. exec: mkdir -p /workspace/bootstrap-project/spec/passing ...
-        2. exec: mkdir -p /workspace/bootstrap-project/spec/failing ...
-        3. exec: mkdir -p /workspace/bootstrap-project/spec/http ...
-      assert: regex /specs added/
-      primary → run-all
-    run-all — run all specs — expect 3 passed and 2 failed
+        1. exec: cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/ && ...
+      primary → validate
+    validate — validate project with all specs
       steps:
-        1. exec: treespec run --config /workspace/bootstrap-project/treespec.yaml ...
-      assert: regex /3 passed/
+        1. exec: treespec validate --config /workspace/greeting/treespec.yaml ...
+      assert: regex /Valid/
       (leaf)
 
 ═══════════════════════════════════════════════════════════════
