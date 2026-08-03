@@ -1,9 +1,9 @@
-description: "child reads parent state"
+description: "child reads parent greet state"
 steps:
   - type: exec
-    description: "read state written by parent"
-    command: "cat /tmp/clean-state"
+    description: "greet config get should return parent's value"
+    command: "greet config get name"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "parent-data" }
+        - { path: "stdout", regex: "Parent" }

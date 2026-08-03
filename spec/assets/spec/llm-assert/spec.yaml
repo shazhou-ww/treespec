@@ -1,8 +1,8 @@
-description: "LLM judges command output"
+description: "LLM judges greet output"
 steps:
   - type: exec
-    description: "echo text for LLM judge"
-    command: "echo hello world"
+    description: "greet with --name flag for LLM judge"
+    command: "greet --name World"
     assert:
       type: llm
-      prompt: "Does the output contain the word hello?"
+      prompt: "Does the output contain a greeting to someone named World?"

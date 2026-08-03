@@ -1,6 +1,6 @@
-description: "parent writes state"
+description: "parent writes greet state"
 steps:
   - type: exec
-    description: "write state for child to inherit"
-    command: "echo parent-data > /tmp/clean-state"
+    description: "init and set name for child to inherit"
+    command: "greet init && greet config set name Parent"
 primary: child

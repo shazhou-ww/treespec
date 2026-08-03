@@ -10,6 +10,13 @@ steps:
       conditions:
         - { path: "stdout", regex: "Created treespec project" }
   - type: exec
+    description: "copy SUT into project"
+    command: "cp -r /app/spec/assets/sut/. /workspace/clean-test/"
+  - type: exec
+    description: "link greet to bin/"
+    cwd: /workspace/clean-test
+    command: "chmod +x src/index.js && mkdir -p bin && ln -sf ../src/index.js bin/greet"
+  - type: exec
     description: "copy clean-parent spec tree"
     command: "cp -r /app/spec/assets/spec/clean-parent /workspace/clean-test/spec/parent"
   - type: exec
