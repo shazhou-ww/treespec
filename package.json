@@ -5,10 +5,10 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "treespec": "dist/index.js"
+    "treespec": "bin/treespec"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/index.js",
+    "build": "tsc",
     "dev": "tsx src/index.ts",
     "validate": "tsx src/index.ts validate",
     "start": "tsx src/index.ts",
@@ -32,7 +32,8 @@
   "homepage": "https://git.shazhou.work/shazhou/treespec",
   "files": [
     "dist",
-    "help"
+    "help",
+    "bin"
   ],
   "dependencies": {
     "dockerode": "^5.0.1",
