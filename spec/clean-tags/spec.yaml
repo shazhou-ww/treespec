@@ -8,29 +8,7 @@ steps:
         - { path: "stdout", regex: "Created treespec project" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
-    command: |
-      mkdir -p /workspace/clean-test/spec/parent/child
-      cat > /workspace/clean-test/spec/parent/spec.yaml << 'SPEC'
-      description: "parent writes state"
-      steps:
-        - type: exec
-          command: "echo parent-data > /tmp/clean-state"
-          assert:
-            type: regex
-            conditions:
-              - { path: "exit_code", regex: "^0$" }
-      primary: child
-      SPEC
-      cat > /workspace/clean-test/spec/parent/child/spec.yaml << 'SPEC'
-      description: "child reads parent state"
-      steps:
-        - type: exec
-          command: "cat /tmp/clean-state"
-          assert:
-            type: regex
-            conditions:
-              - { path: "stdout", regex: "parent-data" }
-      SPEC
+    command: "cp -r /app/spec/assets/spec/clean-parent /workspace/clean-test/spec/parent"
     assert:
       type: regex
       conditions:

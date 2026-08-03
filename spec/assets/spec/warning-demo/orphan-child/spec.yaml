@@ -1,0 +1,4 @@
+description: "orphan child — not in primary/branches"
+steps:
+  - type: exec
+    command: "echo orphan"

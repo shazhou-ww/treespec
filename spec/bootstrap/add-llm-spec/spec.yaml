@@ -3,20 +3,9 @@ env:
   - TREESPEC_LLM_API_KEY
 steps:
   - type: exec
-    command: |
-      mkdir -p /workspace/bootstrap-project/spec/llm-assert
-      cat > /workspace/bootstrap-project/spec/llm-assert/spec.yaml << 'SPEC'
-      description: "LLM judges command output"
-      steps:
-        - type: exec
-          command: "echo hello world"
-          assert:
-            type: llm
-            prompt: "Does the output contain the word hello?"
-      SPEC
+    command: "cp -r /app/spec/assets/spec/llm-assert /workspace/bootstrap-project/spec/llm-assert"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-
 primary: run-llm

@@ -1,26 +1,9 @@
 description: "add wait/poll spec"
 steps:
   - type: exec
-    command: |
-      mkdir -p /workspace/bootstrap-project/spec/wait-poll
-      cat > /workspace/bootstrap-project/spec/wait-poll/spec.yaml << 'SPEC'
-      description: "wait for background process to become ready"
-      steps:
-        - type: exec
-          command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
-        - type: exec
-          command: "cat /tmp/ready"
-          wait:
-            timeout: "30s"
-            delay: "2s"
-          assert:
-            type: regex
-            conditions:
-              - { path: "stdout", regex: "ready" }
-      SPEC
+    command: "cp -r /app/spec/assets/spec/wait-poll /workspace/bootstrap-project/spec/wait-poll"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-
 primary: run-wait

@@ -1,0 +1,8 @@
+description: "should be skipped when parent fails"
+steps:
+  - type: exec
+    command: "echo should-not-run"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "should-not-run" }

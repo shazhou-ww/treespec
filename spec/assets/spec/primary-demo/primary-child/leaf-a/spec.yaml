@@ -1,0 +1,8 @@
+description: "leaf on main line"
+steps:
+  - type: exec
+    command: "echo leaf-a"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "leaf-a" }

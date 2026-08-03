@@ -1,0 +1,8 @@
+description: "read parent committed state"
+steps:
+  - type: exec
+    command: "cat /tmp/chain-state"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "parent-data" }

@@ -1,0 +1,4 @@
+description: "child a"
+steps:
+  - type: exec
+    command: "echo child-a"

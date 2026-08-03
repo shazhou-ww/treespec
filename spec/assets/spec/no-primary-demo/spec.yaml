@@ -1,0 +1,6 @@
+description: "branches without primary"
+steps:
+  - type: exec
+    command: "echo no-primary"
+branches:
+  - child-a

@@ -1,21 +1,9 @@
 description: "add a spec with invalid assertion type"
 steps:
   - type: exec
-    command: |
-      mkdir -p /workspace/bootstrap-project/spec/broken-spec
-      cat > /workspace/bootstrap-project/spec/broken-spec/spec.yaml << 'SPEC'
-      description: "broken spec with invalid assert"
-      steps:
-        - type: exec
-          command: "echo hi"
-          assert:
-            type: nonexistent
-            conditions:
-              - { path: "stdout", regex: "hi" }
-      SPEC
+    command: "cp -r /app/spec/assets/spec/broken-spec /workspace/bootstrap-project/spec/broken-spec"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
-
 primary: validate-rejects

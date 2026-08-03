@@ -1,0 +1,9 @@
+description: "parent writes state"
+steps:
+  - type: exec
+    command: "echo parent-data > /tmp/clean-state"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+primary: child

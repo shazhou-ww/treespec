@@ -1,14 +1,7 @@
 description: "verify root spec.yaml creates a single tree (Roots: 1)"
 steps:
   - type: exec
-    command: |
-      rm -rf /workspace/root-tree-test
-      treespec init /workspace/root-tree-test --name root-tree-test 2>&1
-      # Add a root spec.yaml — container node with primary, no steps
-      cat > /workspace/root-tree-test/spec/spec.yaml << 'SPEC'
-      description: "root container node"
-      primary: example
-      SPEC
+    command: "rm -rf /workspace/root-tree-test && treespec init /workspace/root-tree-test --name root-tree-test 2>&1 && cp /app/spec/assets/spec/root-spec/spec.yaml /workspace/root-tree-test/spec/spec.yaml"
     assert:
       type: regex
       conditions:

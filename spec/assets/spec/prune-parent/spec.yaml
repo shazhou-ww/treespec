@@ -1,0 +1,5 @@
+description: "intentional failure"
+steps:
+  - type: exec
+    command: "exit 1"
+primary: prune-child

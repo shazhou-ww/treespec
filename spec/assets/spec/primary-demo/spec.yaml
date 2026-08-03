@@ -1,0 +1,12 @@
+description: "primary demo root"
+steps:
+  - type: exec
+    command: "echo root"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "root" }
+primary: primary-child
+branches:
+  - branch-b
+  - branch-c

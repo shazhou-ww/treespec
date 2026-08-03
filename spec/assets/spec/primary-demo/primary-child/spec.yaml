@@ -1,0 +1,9 @@
+description: "primary child — main line continuation"
+steps:
+  - type: exec
+    command: "echo primary"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "primary" }
+primary: leaf-a

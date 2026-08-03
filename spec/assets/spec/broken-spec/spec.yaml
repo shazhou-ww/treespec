@@ -1,0 +1,8 @@
+description: "broken spec with invalid assert"
+steps:
+  - type: exec
+    command: "echo hi"
+    assert:
+      type: nonexistent
+      conditions:
+        - { path: "stdout", regex: "hi" }

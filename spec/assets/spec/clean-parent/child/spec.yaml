@@ -1,0 +1,8 @@
+description: "child reads parent state"
+steps:
+  - type: exec
+    command: "cat /tmp/clean-state"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "parent-data" }

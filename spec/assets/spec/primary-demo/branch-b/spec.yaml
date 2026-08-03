@@ -1,0 +1,9 @@
+description: "branch b"
+steps:
+  - type: exec
+    command: "echo branch-b"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "branch-b" }
+primary: leaf-b
