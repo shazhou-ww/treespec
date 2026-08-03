@@ -1,6 +1,7 @@
 description: "run all specs — expect 6 passed and 1 failed"
 steps:
   - type: exec
+    description: "run all greet specs"
     command: "treespec run --config /workspace/bootstrap-project/treespec.yaml --no-trace --rebuild 2>&1; true"
     assert:
       type: regex

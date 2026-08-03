@@ -1,4 +1,5 @@
 description: "declared child"
 steps:
   - type: exec
+    description: "echo declared child"
     command: "echo declared"

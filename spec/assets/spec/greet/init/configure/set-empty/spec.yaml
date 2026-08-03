@@ -1,6 +1,7 @@
 description: "set empty name, greet fails"
 steps:
   - type: exec
+    description: "set name to empty string"
     command: "greet config set name ''"
     assert:
       type: regex
@@ -8,6 +9,7 @@ steps:
         - { path: "stdout", regex: "name=" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
+    description: "greet without name — should fail"
     command: "greet"
     assert:
       type: regex

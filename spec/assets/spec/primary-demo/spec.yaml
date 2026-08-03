@@ -1,6 +1,7 @@
 description: "primary demo root"
 steps:
   - type: exec
+    description: "echo root"
     command: "echo root"
     assert:
       type: regex

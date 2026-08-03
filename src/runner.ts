@@ -126,6 +126,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 function stepSummaryOf(step: Step): string {
+	if (step.description) return step.description;
 	if (step.type === 'exec') return step.command;
 	return `${step.request.method.toUpperCase()} ${step.request.url}`;
 }

@@ -1,6 +1,7 @@
 description: "verify tree shows primary first, then branches"
 steps:
   - type: exec
+    description: "show primary-demo tree"
     command: "treespec tree --config /workspace/bootstrap-project/treespec.yaml primary-demo 2>&1"
     assert:
       type: regex

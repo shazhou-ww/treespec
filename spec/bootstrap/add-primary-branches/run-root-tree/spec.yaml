@@ -1,12 +1,14 @@
 description: "verify root spec.yaml creates a single tree (Roots: 1)"
 steps:
   - type: exec
+    description: "init root-tree-test project"
     command: "rm -rf /workspace/root-tree-test && treespec init /workspace/root-tree-test --name root-tree-test 2>&1 && cp /app/spec/assets/spec/root-spec/spec.yaml /workspace/root-tree-test/spec/spec.yaml"
     assert:
       type: regex
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
+    description: "validate empty project"
     command: "treespec validate --config /workspace/root-tree-test/treespec.yaml 2>&1"
     assert:
       type: regex
@@ -15,6 +17,7 @@ steps:
         - { path: "stdout", regex: "root" }
         - { path: "exit_code", regex: "^0$" }
   - type: exec
+    description: "show tree of empty project"
     command: "treespec tree --config /workspace/root-tree-test/treespec.yaml 2>&1"
     assert:
       type: regex

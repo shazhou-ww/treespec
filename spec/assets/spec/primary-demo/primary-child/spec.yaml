@@ -1,6 +1,7 @@
 description: "primary child — main line continuation"
 steps:
   - type: exec
+    description: "echo primary-child"
     command: "echo primary"
     assert:
       type: regex

@@ -1,6 +1,7 @@
 description: "parent writes state"
 steps:
   - type: exec
+    description: "write state for child to inherit"
     command: "echo parent-data > /tmp/clean-state"
     assert:
       type: regex

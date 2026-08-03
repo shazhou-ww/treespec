@@ -1,6 +1,7 @@
 description: "add a spec with invalid assertion type"
 steps:
   - type: exec
+    description: "copy broken spec into project"
     command: "cp -r /app/spec/assets/spec/broken-spec /workspace/bootstrap-project/spec/broken-spec"
     assert:
       type: regex

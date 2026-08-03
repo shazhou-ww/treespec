@@ -1,6 +1,7 @@
 description: "validate should reject the broken spec"
 steps:
   - type: exec
+    description: "validate should reject broken spec"
     command: "treespec validate --config /workspace/bootstrap-project/treespec.yaml 2>&1; [ $? -ne 0 ]"
     assert:
       type: regex

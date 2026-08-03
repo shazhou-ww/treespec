@@ -1,6 +1,7 @@
 description: "branch c — leaf node"
 steps:
   - type: exec
+    description: "echo branch-c"
     command: "echo branch-c"
     assert:
       type: regex

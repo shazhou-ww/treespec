@@ -54,6 +54,7 @@ const WaitConfigSchema = z.object({
 const ExecStepSchema = z.object({
 	type: z.literal('exec'),
 	command: z.string().min(1),
+	description: z.string().optional(),
 	timeout: z.string().min(1).optional(),
 	assert: AssertionSchema.optional(),
 	wait: WaitConfigSchema.optional(),
@@ -62,6 +63,7 @@ const ExecStepSchema = z.object({
 const HttpStepSchema = z.object({
 	type: z.literal('http'),
 	request: HttpRequestSchema,
+	description: z.string().optional(),
 	timeout: z.string().min(1).optional(),
 	assert: AssertionSchema.optional(),
 	wait: WaitConfigSchema.optional(),

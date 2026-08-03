@@ -79,6 +79,8 @@ export interface ExecStep {
 	type: 'exec';
 	/** Shell command to execute inside the container. Supports $ENV_VAR substitution. */
 	command: string;
+	/** Human-readable description shown in output. Falls back to command if omitted. */
+	description?: string;
 	/** Duration string: "30s", "2m", "1h". Default: "30s". */
 	timeout?: string;
 	/** Assertion on step output. Omit = transition step (exit code 0 = PASS). */
@@ -95,6 +97,8 @@ export interface ExecStep {
 export interface HttpStep {
 	type: 'http';
 	request: HttpRequest;
+	/** Human-readable description shown in output. Falls back to METHOD URL if omitted. */
+	description?: string;
 	/** Duration string: "30s", "2m". Default: "30s". */
 	timeout?: string;
 	/** Assertion on response. Omit = transition step (HTTP 2xx = PASS). */

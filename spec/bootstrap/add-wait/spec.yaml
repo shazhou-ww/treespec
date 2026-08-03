@@ -1,6 +1,7 @@
 description: "add wait/poll spec"
 steps:
   - type: exec
+    description: "copy wait-poll spec into project"
     command: "cp -r /app/spec/assets/spec/wait-poll /workspace/bootstrap-project/spec/wait-poll"
     assert:
       type: regex

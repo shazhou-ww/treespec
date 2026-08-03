@@ -1,6 +1,7 @@
 description: "leaf on main line"
 steps:
   - type: exec
+    description: "echo leaf-a"
     command: "echo leaf-a"
     assert:
       type: regex

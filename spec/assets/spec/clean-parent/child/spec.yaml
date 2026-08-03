@@ -1,6 +1,7 @@
 description: "child reads parent state"
 steps:
   - type: exec
+    description: "read state written by parent"
     command: "cat /tmp/clean-state"
     assert:
       type: regex

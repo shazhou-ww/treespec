@@ -3,6 +3,7 @@ env:
   - TREESPEC_LLM_API_KEY
 steps:
   - type: exec
+    description: "copy llm-assert spec into project"
     command: "cp -r /app/spec/assets/spec/llm-assert /workspace/bootstrap-project/spec/llm-assert"
     assert:
       type: regex

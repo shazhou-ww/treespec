@@ -1,6 +1,7 @@
 description: "read parent committed state"
 steps:
   - type: exec
+    description: "read state from parent commit"
     command: "cat /tmp/chain-state"
     assert:
       type: regex
