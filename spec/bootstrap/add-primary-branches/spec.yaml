@@ -2,7 +2,7 @@ description: "add primary/branches test specs — verify explicit child discover
 steps:
   - type: exec
     description: "copy primary-demo spec into project"
-    command: "cp -r /app/spec/assets/spec/primary-demo /workspace/greeting/spec/primary-demo"
+    command: "cp -r /app/spec/assets/spec/primary-demo /workspace/greeting/spec/"
 primary: run-tree
 branches:
   - run-validate-warning

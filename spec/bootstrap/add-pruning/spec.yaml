@@ -2,5 +2,5 @@ description: "add pruning fixture — parent fails, child should skip"
 steps:
   - type: exec
     description: "copy prune-parent spec into project"
-    command: "cp -r /app/spec/assets/spec/prune-parent /workspace/greeting/spec/prune-parent"
+    command: "cp -r /app/spec/assets/spec/prune-parent /workspace/greeting/spec/"
 primary: run-pruning
