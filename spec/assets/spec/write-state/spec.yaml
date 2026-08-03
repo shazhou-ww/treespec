@@ -10,10 +10,10 @@ postcon:
   - name: verify-state-committed
     steps:
       - type: exec
-        description: "greet should read committed state"
-        command: "greet"
+        description: "greet config get should return committed value"
+        command: "greet config get name"
         assert:
           type: regex
           conditions:
-            - { path: "stdout", regex: "Hello, Alice!" }
+            - { path: "stdout", regex: "Alice" }
 primary: read-state

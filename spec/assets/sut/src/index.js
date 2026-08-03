@@ -39,6 +39,14 @@ if (args[0] === 'config' && args[1] === 'set') {
   return;
 }
 
+// --- Subcommand: config get <key> ---
+if (args[0] === 'config' && args[1] === 'get') {
+  const key = args[2];
+  const state = loadState();
+  console.log(state[key] ?? '');
+  return;
+}
+
 // --- Subcommand: serve ---
 if (args[0] === 'serve') {
   let port = 9876;
