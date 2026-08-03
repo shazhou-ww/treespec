@@ -1,9 +1,11 @@
-description: "http failing"
+description: "http failing — expect 999 but get 200"
 steps:
+  - type: exec
+    command: "greet serve --port 9876 & sleep 0.5"
   - type: http
     request:
       method: GET
-      url: "https://httpbingo.org/get"
+      url: "http://localhost:9876/"
     assert:
       type: regex
       conditions:

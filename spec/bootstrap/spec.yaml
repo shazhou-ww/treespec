@@ -21,6 +21,12 @@ steps:
       conditions:
         - { path: "exit_code", regex: "^0$" }
   - type: exec
+    command: "printf '\\ndocker:\\n  network: host\\n' >> /workspace/bootstrap-project/treespec.yaml"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
     command: "test -f /workspace/bootstrap-project/treespec.yaml && test -f /workspace/bootstrap-project/spec/Dockerfile && test -f /workspace/bootstrap-project/node_modules/.bin/greet && echo ok"
     assert:
       type: regex
