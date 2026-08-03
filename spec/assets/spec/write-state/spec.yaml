@@ -1,14 +1,19 @@
-description: "write state for children to inherit"
+description: "greet init + config set — write state for children to inherit"
 steps:
   - type: exec
-    command: "echo parent-data > /tmp/chain-state"
+    description: "initialize greet state file"
+    command: "greet init"
+  - type: exec
+    description: "set name to Alice"
+    command: "greet config set name Alice"
 postcon:
   - name: verify-state-committed
     steps:
       - type: exec
-        command: "cat /tmp/chain-state"
+        description: "greet should read committed state"
+        command: "greet"
         assert:
           type: regex
           conditions:
-            - { path: "stdout", regex: "parent-data" }
+            - { path: "stdout", regex: "Hello, Alice!" }
 primary: read-state

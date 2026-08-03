@@ -1,4 +1,4 @@
-description: "add commit chain specs — parent writes, child reads"
+description: "add commit chain specs — greet state survives docker commit"
 steps:
   - type: exec
     description: "copy write-state spec into project"

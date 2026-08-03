@@ -1,9 +1,9 @@
-description: "read parent committed state"
+description: "read parent committed state via greet"
 steps:
   - type: exec
-    description: "read state from parent commit"
-    command: "cat /tmp/chain-state"
+    description: "greet reads state inherited from parent commit"
+    command: "greet"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "parent-data" }
+        - { path: "stdout", regex: "Hello, Alice!" }
