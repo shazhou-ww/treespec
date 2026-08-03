@@ -3,10 +3,6 @@ steps:
   - type: exec
     description: "copy primary-demo spec into project"
     command: "cp -r /app/spec/assets/spec/primary-demo /workspace/greeting/spec/primary-demo"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 primary: run-tree
 branches:
   - run-validate-warning

@@ -29,10 +29,16 @@ const LlmAssertionSchema = z.object({
 	prompt: z.string().min(1),
 });
 
+const ExitCodeAssertionSchema = z.object({
+	type: z.literal('exit_code'),
+	equals: z.number().int().optional(),
+});
+
 const AssertionSchema = z.discriminatedUnion('type', [
 	RegexAssertionSchema,
 	JsonataAssertionSchema,
 	LlmAssertionSchema,
+	ExitCodeAssertionSchema,
 ]);
 
 // ─── HTTP / Wait ─────────────────────────────────────────────────

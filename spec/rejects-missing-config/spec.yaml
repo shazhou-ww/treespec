@@ -3,7 +3,3 @@ steps:
   - type: exec
     description: "validate nonexistent config — should fail"
     command: "treespec validate --config /nonexistent/treespec.yaml 2>&1; [ $? -ne 0 ]"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }

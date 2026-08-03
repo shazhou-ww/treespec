@@ -3,10 +3,6 @@ steps:
   - type: exec
     description: "copy greet spec tree into project"
     command: "cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/greet"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 primary: run-all
 branches:
   - run-subset

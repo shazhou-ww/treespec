@@ -3,8 +3,4 @@ steps:
   - type: exec
     description: "copy write-state spec into project"
     command: "cp -r /app/spec/assets/spec/write-state /workspace/greeting/spec/write-state"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 primary: run-commit-chain

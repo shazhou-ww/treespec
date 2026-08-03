@@ -35,13 +35,19 @@ export interface JsonataAssertion {
 	expression: string;
 }
 
+export interface ExitCodeAssertion {
+	type: 'exit_code';
+	/** Expected exit code. Default: 0. */
+	equals?: number;
+}
+
 export interface LlmAssertion {
 	type: 'llm';
 	/** Natural language criteria for the LLM to judge against. */
 	prompt: string;
 }
 
-export type Assertion = RegexAssertion | JsonataAssertion | LlmAssertion;
+export type Assertion = RegexAssertion | JsonataAssertion | ExitCodeAssertion | LlmAssertion;
 
 // ─── HTTP Request ────────────────────────────────────────────────
 

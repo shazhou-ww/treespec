@@ -12,4 +12,3 @@ steps:
         - { path: "stdout", regex: "verify" }
         - { path: "stdout", regex: "set-empty" }
         - { path: "stdout", regex: "serve" }
-        - { path: "exit_code", regex: "^0$" }

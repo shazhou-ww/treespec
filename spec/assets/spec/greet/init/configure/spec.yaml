@@ -7,7 +7,6 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "name=Alice" }
-        - { path: "exit_code", regex: "^0$" }
 primary: verify
 branches:
   - set-empty

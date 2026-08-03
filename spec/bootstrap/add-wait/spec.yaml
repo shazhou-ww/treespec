@@ -3,8 +3,4 @@ steps:
   - type: exec
     description: "copy wait-poll spec into project"
     command: "cp -r /app/spec/assets/spec/wait-poll /workspace/greeting/spec/wait-poll"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 primary: run-wait

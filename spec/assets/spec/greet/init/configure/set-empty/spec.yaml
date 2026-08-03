@@ -7,11 +7,6 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "name=" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "greet without name — should fail"
     command: "greet"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }

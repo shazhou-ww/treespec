@@ -7,5 +7,4 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "initialized" }
-        - { path: "exit_code", regex: "^0$" }
 primary: configure

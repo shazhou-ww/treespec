@@ -7,14 +7,9 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "Created treespec project" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "copy clean-parent spec tree"
     command: "cp -r /app/spec/assets/spec/clean-parent /workspace/clean-test/spec/parent"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "run parent spec"
     command: "treespec run --config /workspace/clean-test/treespec.yaml parent --keep-tags --rebuild 2>&1"
@@ -22,7 +17,6 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "2 passed" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "clean leftover docker tags"
     command: "treespec clean 2>&1"
@@ -30,4 +24,3 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "Removed" }
-        - { path: "exit_code", regex: "^0$" }

@@ -3,8 +3,4 @@ steps:
   - type: exec
     description: "copy prune-parent spec into project"
     command: "cp -r /app/spec/assets/spec/prune-parent /workspace/greeting/spec/prune-parent"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 primary: run-pruning

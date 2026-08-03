@@ -102,6 +102,9 @@ function isHttpLike(data: Record<string, unknown>): boolean {
  * If `assertion` is undefined:
  *   - exec transition: exit_code 0 = PASS
  *   - http transition: HTTP 2xx = PASS
+ * For exec steps with a defined assertion (not 'exit_code' type),
+ * exit_code 0 is implicitly required — non-zero exit fails immediately
+ * before evaluating regex/jsonata/llm conditions.
  * `ctx` is required when `assertion.type === 'llm'`.
  */
 export async function evaluateAssertion(
@@ -125,6 +128,23 @@ export async function evaluateAssertion(
 			return { verdict: 'PASS', reason: 'transition step: exit code 0' };
 		}
 		return { verdict: 'FAIL', reason: `transition step: exit code ${code}` };
+	}
+
+	// Implicit exit_code=0 check for exec steps (not http, not exit_code assertion)
+	if (!httpLike && assertion.type !== 'exit_code') {
+		const code = Number(data.exit_code ?? 0);
+		if (code !== 0) {
+			return { verdict: 'FAIL', reason: `exit code ${code}` };
+		}
+	}
+
+	if (assertion.type === 'exit_code') {
+		const expected = assertion.equals ?? 0;
+		const actual = Number(data.exit_code ?? 0);
+		if (actual === expected) {
+			return { verdict: 'PASS', reason: `exit code ${actual}` };
+		}
+		return { verdict: 'FAIL', reason: `exit_code ${actual} ≠ expected ${expected}` };
 	}
 
 	if (assertion.type === 'llm') {

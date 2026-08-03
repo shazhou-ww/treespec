@@ -9,7 +9,6 @@ steps:
         - { path: "stdout", regex: "bootstrap" }
         - { path: "stdout", regex: "add-specs" }
         - { path: "stdout", regex: "run-all" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "show ancestors only"
     command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-ancestors 2>&1"
@@ -18,7 +17,6 @@ steps:
       conditions:
         - { path: "stdout", regex: "← here" }
         - { path: "stdout", regex: "bootstrap" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "show descendants only"
     command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-descends 2>&1"
@@ -26,4 +24,3 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "run-all" }
-        - { path: "exit_code", regex: "^0$" }

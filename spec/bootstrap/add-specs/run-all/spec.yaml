@@ -8,4 +8,3 @@ steps:
       conditions:
         - { path: "stdout", regex: "6 passed" }
         - { path: "stdout", regex: "1 failed" }
-        - { path: "exit_code", regex: "^0$" }

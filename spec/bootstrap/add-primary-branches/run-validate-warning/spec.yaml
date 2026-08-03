@@ -8,4 +8,3 @@ steps:
       conditions:
         - { path: "stdout", regex: "orphan-child" }
         - { path: "stdout", regex: "not declared" }
-        - { path: "exit_code", regex: "^0$" }

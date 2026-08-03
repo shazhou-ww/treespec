@@ -2,10 +2,6 @@ description: "write state for children to inherit"
 steps:
   - type: exec
     command: "echo parent-data > /tmp/chain-state"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
 postcon:
   - name: verify-state-committed
     steps:

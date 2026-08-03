@@ -8,7 +8,6 @@ steps:
       conditions:
         - { path: "stdout", regex: "Trace" }
         - { path: "stdout", regex: "greeting-trace" }
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "verify trace file and show"
     command: "test -f /workspace/greeting-trace/trace.jsonl && treespec show /workspace/greeting-trace/trace.jsonl 2>&1"
@@ -17,4 +16,3 @@ steps:
       conditions:
         - { path: "stdout", regex: "PASS" }
         - { path: "stdout", regex: "FAIL" }
-        - { path: "exit_code", regex: "^0$" }

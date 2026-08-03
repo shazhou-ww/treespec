@@ -3,10 +3,6 @@ steps:
   - type: exec
     description: "create project dir and install SUT (greet CLI)"
     command: "rm -rf /workspace/greeting && mkdir -p /workspace/greeting && cp -r /app/spec/assets/sut /workspace/greeting/sut && chmod +x /workspace/greeting/sut/src/index.js && mkdir -p /workspace/greeting/node_modules/.bin && ln -sf ../../sut/src/index.js /workspace/greeting/node_modules/.bin/greet"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
   - type: exec
     description: "init treespec in existing project"
     command: "treespec init /workspace/greeting --name greeting 2>&1"
@@ -15,7 +11,6 @@ steps:
       conditions:
         - { path: "stdout", regex: "Created treespec project" }
         - { path: "stdout", regex: "greeting" }
-        - { path: "exit_code", regex: "^0$" }
 postcon:
   - name: verify-setup
     steps:
@@ -26,7 +21,6 @@ postcon:
           type: regex
           conditions:
             - { path: "stdout", regex: "ok" }
-            - { path: "exit_code", regex: "^0$" }
 primary: add-specs
 branches:
   - add-bad-spec

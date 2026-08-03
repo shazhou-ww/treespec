@@ -7,4 +7,3 @@ steps:
       type: regex
       conditions:
         - { path: "stdout", regex: "(Error|error|invalid|Invalid)" }
-        - { path: "exit_code", regex: "^0$" }

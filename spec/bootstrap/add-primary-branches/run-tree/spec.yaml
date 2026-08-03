@@ -10,4 +10,3 @@ steps:
         - { path: "stdout", regex: "primary-child" }
         - { path: "stdout", regex: "branch-b" }
         - { path: "stdout", regex: "branch-c" }
-        - { path: "exit_code", regex: "^0$" }
