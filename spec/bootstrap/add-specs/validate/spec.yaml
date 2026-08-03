@@ -1,11 +1,12 @@
-description: "validate after adding all specs"
+description: "validate project with all specs"
 steps:
   - type: exec
-    description: "validate should pass"
+    description: "validate all specs"
     command: "treespec validate --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "Valid" }
         - { path: "stdout", regex: "greet" }
-        - { path: "stdout", regex: "configure" }
+        - { path: "stdout", regex: "write-state" }
+        - { path: "stdout", regex: "primary-demo" }

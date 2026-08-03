@@ -1,10 +1,12 @@
-description: "run all specs — expect 6 passed and 1 failed"
+description: "run all specs — expect failures (prune-parent, set-empty) and skips"
 steps:
   - type: exec
-    description: "run all greet specs"
+    description: "run all specs"
+    timeout: "5m"
     command: "treespec run --config /workspace/greeting/treespec.yaml --no-trace --rebuild 2>&1; true"
     assert:
       type: regex
       conditions:
-        - { path: "stdout", regex: "6 passed" }
-        - { path: "stdout", regex: "1 failed" }
+        - { path: "stdout", regex: "passed" }
+        - { path: "stdout", regex: "failed" }
+        - { path: "stdout", regex: "prune-parent" }

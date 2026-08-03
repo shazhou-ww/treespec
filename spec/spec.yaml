@@ -3,5 +3,6 @@ description: "treespec self-test tree root"
 primary: bootstrap
 branches:
   - clean-tags
+  - root-tree-test
   - rejects-missing-config
   - shows-help

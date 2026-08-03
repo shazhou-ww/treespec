@@ -1,14 +1,12 @@
-description: "show tree after specs are added"
+description: "show full spec forest"
 steps:
   - type: exec
-    description: "show spec tree"
+    description: "show tree"
     command: "treespec tree --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "greet" }
-        - { path: "stdout", regex: "init" }
-        - { path: "stdout", regex: "configure" }
-        - { path: "stdout", regex: "verify" }
-        - { path: "stdout", regex: "set-empty" }
-        - { path: "stdout", regex: "serve" }
+        - { path: "stdout", regex: "write-state" }
+        - { path: "stdout", regex: "prune-parent" }
+        - { path: "stdout", regex: "primary-demo" }

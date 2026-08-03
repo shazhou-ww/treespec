@@ -1,0 +1,6 @@
+description: "add no-primary-demo — branches without primary should error"
+steps:
+  - type: exec
+    description: "copy no-primary-demo into project"
+    command: "cp -r /app/spec/assets/spec/no-primary-demo /workspace/greeting/spec/"
+primary: validate-rejects

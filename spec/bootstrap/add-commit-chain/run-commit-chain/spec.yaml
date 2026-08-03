@@ -1,9 +1,0 @@
-description: "run commit chain — expect 2 passed"
-steps:
-  - type: exec
-    description: "run write-state spec tree"
-    command: "treespec run --config /workspace/greeting/treespec.yaml write-state --no-trace --rebuild 2>&1"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "2 passed" }

@@ -1,4 +1,4 @@
-description: "add a spec with invalid assertion type"
+description: "add broken spec — validate and run should reject"
 steps:
   - type: exec
     description: "copy broken spec into project"

@@ -32,10 +32,4 @@ postcon:
             - { path: "stdout", regex: "ok" }
 primary: add-specs
 branches:
-  - add-bad-spec
-  - add-commit-chain
-  - add-llm-spec
-  - add-pruning
-  - add-primary-branches
-  - add-wait
   - validate-fresh

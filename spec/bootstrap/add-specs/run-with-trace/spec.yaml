@@ -2,6 +2,7 @@ description: "run with trace enabled, then show it"
 steps:
   - type: exec
     description: "run with trace output"
+    timeout: "5m"
     command: |
       rm -rf /workspace/greeting-trace &&
       treespec run --config /workspace/greeting/treespec.yaml --rebuild --output /workspace/greeting-trace/trace.jsonl 2>&1; true

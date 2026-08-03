@@ -1,0 +1,11 @@
+description: "validate should error about missing primary"
+steps:
+  - type: exec
+    description: "validate — expect error about branches without primary"
+    command: |
+      treespec validate --config /workspace/greeting/treespec.yaml 2>&1;
+      [ $? -ne 0 ]
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "primary" }

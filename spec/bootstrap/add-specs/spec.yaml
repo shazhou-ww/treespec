@@ -1,13 +1,22 @@
-description: "add greet spec tree with state-dependent structure"
+description: "copy all good spec trees into project at once"
 steps:
   - type: exec
-    description: "copy greet spec tree into project"
-    command: "cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/"
-primary: run-all
+    description: "copy greet, write-state, llm-assert, prune-parent, wait-poll, primary-demo"
+    command: |
+      cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/ &&
+      cp -r /app/spec/assets/spec/write-state /workspace/greeting/spec/ &&
+      cp -r /app/spec/assets/spec/llm-assert /workspace/greeting/spec/ &&
+      cp -r /app/spec/assets/spec/prune-parent /workspace/greeting/spec/ &&
+      cp -r /app/spec/assets/spec/wait-poll /workspace/greeting/spec/ &&
+      cp -r /app/spec/assets/spec/primary-demo /workspace/greeting/spec/
+primary: validate
 branches:
+  - run-all
+  - show-tree
+  - show-lineage
   - run-subset
   - run-with-keep-tags
   - run-with-trace
-  - show-tree
-  - show-lineage
-  - validate-passes
+  - add-warning-demo
+  - add-bad-spec
+  - add-no-primary

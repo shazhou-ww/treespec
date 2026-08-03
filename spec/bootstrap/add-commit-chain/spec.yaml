@@ -1,6 +1,0 @@
-description: "add commit chain specs — greet state survives docker commit"
-steps:
-  - type: exec
-    description: "copy write-state spec into project"
-    command: "cp -r /app/spec/assets/spec/write-state /workspace/greeting/spec/"
-primary: run-commit-chain

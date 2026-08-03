@@ -1,0 +1,10 @@
+description: "validate should warn about orphan child"
+steps:
+  - type: exec
+    description: "validate — expect orphan warning"
+    command: "treespec validate --config /workspace/greeting/treespec.yaml 2>&1"
+    assert:
+      type: regex
+      conditions:
+        - { path: "stdout", regex: "orphan-child" }
+        - { path: "stdout", regex: "not declared" }

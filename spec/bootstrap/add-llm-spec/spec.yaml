@@ -1,8 +1,0 @@
-description: "add LLM assert spec"
-env:
-  - TREESPEC_LLM_API_KEY
-steps:
-  - type: exec
-    description: "copy llm-assert spec into project"
-    command: "cp -r /app/spec/assets/spec/llm-assert /workspace/greeting/spec/"
-primary: run-llm
