@@ -554,7 +554,7 @@ Base image 由项目的 Dockerfile 构建，**仅提供运行时环境**：
 - Node.js / Python 等运行时
 - Docker daemon（DinD，`fuse-overlayfs` 存储驱动）
 - 系统级依赖（如 `git`, `curl`）
-- `ENV PATH` 让 mount 进来的 `node_modules/.bin` 可直接调用
+- `ENV PATH` 让 mount 进来的 `bin/` 和 `node_modules/.bin` 可直接调用
 
 项目内容（源码、依赖、构建产物）不在 image 中——全部通过 `projectDir` mount 在运行时提供。
 
@@ -563,7 +563,7 @@ Base image 由项目的 Dockerfile 构建，**仅提供运行时环境**：
 FROM node:22-alpine
 RUN apk add --no-cache docker fuse-overlayfs fuse
 WORKDIR /app
-ENV PATH="/app/node_modules/.bin:$PATH"
+ENV PATH="/app/bin:/app/node_modules/.bin:$PATH"
 # dind-init: 清理 stale state, 启动 fuse-overlayfs dockerd, 等待就绪
 ```
 

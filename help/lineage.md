@@ -60,17 +60,17 @@ Examples:
     $ treespec lineage
 
     root — treespec self-test tree root
-    bootstrap — init a treespec project and prepare Dockerfile for DinD
-    add-specs — add passing and failing specs (exec + http step types)
-    run-all — run all specs — expect 3 passed and 2 failed
+    bootstrap — init a treespec project and install SUT (greet CLI)
+    add-specs — copy all spec trees into project at once
+    validate — validate project with all specs
 
   Ancestors only (from a node):
 
     $ treespec lineage bootstrap/add-specs --only-ancestors
 
     root — treespec self-test tree root
-    bootstrap — init a treespec project and prepare Dockerfile for DinD
-    add-specs — add passing and failing specs ← here
+    bootstrap — init a treespec project and install SUT (greet CLI)
+    add-specs — copy all spec trees into project at once ← here
 
   Descends only, verbose:
 

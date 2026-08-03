@@ -51,12 +51,14 @@ spec.yaml format:
   steps:                                     # required
     - type: exec                             #   exec | http
       command: "some command"                #   required for exec
+      cwd: "/workspace"                      #   optional, working dir inside container
+      description: "do something"            #   optional, human-readable
       timeout: "30s"                         #   optional, per-step
       wait:                                  #   optional — poll until ready
         timeout: "30s"                       #     total wait timeout
         delay: "2s"                          #     gap AFTER step, before re-check
       assert:                                #   optional — omit for transition step
-        type: regex                          #   regex | jsonata | llm
+        type: regex                          #   regex | jsonata | exit_code | llm
         conditions: [...]                    #   (see assert types below)
   postcon:                                   # optional, post-condition verification
     - name: verify-state
@@ -72,7 +74,9 @@ Step types:
       timeout: "10s"
       assert: { type: regex, ... }
 
-  type: http — Send an HTTP request from the HOST (not inside container).
+  type: http — Send an HTTP request from inside the container (node -e fetch).
+    URL can be localhost:PORT to access services started in the same container.
+    No network: host needed — http and exec share the same network namespace.
     - type: http
       request:
         method: POST
@@ -95,9 +99,10 @@ Assertion types:
       type: regex
       conditions:
         - { path: "stdout", regex: "hello" }
-        - { path: "exit_code", regex: "^0$" }
+        # exit_code=0 is checked implicitly — no need to add it explicitly
     Paths: stdout | stderr | exit_code (exec) | status | body | headers.* (http)
     All conditions must match → PASS. Any miss → FAIL.
+    Note: exec steps with assert also implicitly check exit_code=0.
 
   type: jsonata — JSONata expression evaluated against a context object.
     assert:
@@ -118,9 +123,15 @@ Assertion types:
 
   (omit assert) — Transition step. Exit 0 = PASS, non-zero = FAIL.
 
+  type: exit_code — Check exit code explicitly.
+    assert:
+      type: exit_code
+      equals: 0                          #   optional, default 0
+
 Decision guide:
   Pattern matching on output?      → regex
   Extract/validate structured data? → jsonata
+  Just check exit code?              → exit_code (or omit assert)
   Need semantic judgment?           → llm
   Just cd/mkdir/setup?              → omit assert
 
@@ -221,8 +232,8 @@ Trace output (JSONL, written to output path):
 
 Pitfalls:
 
-1. HTTP steps run on HOST, not inside container. They can't access
-   container-local files. Use exec steps for container-internal checks.
+1. HTTP steps execute inside the container (via node -e fetch). They CAN
+   access container-local services (e.g., localhost:PORT). No network: host needed.
 
 2. Env vars: $VAR in commands/HTTP is substituted by treespec (shell priority).
    The `env` field DECLARES required vars — missing → SKIP, not error.
