@@ -2,7 +2,7 @@ description: "validate the freshly initialized project"
 steps:
   - type: exec
     description: "validate should pass"
-    command: "treespec validate --config /workspace/bootstrap-project/treespec.yaml 2>&1"
+    command: "treespec validate --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:

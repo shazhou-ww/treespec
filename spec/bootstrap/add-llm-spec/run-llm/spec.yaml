@@ -4,7 +4,7 @@ env:
 steps:
   - type: exec
     description: "run llm-assert spec"
-    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml llm-assert --no-trace --rebuild 2>&1"
+    command: "treespec run --config /workspace/greeting/treespec.yaml llm-assert --no-trace --rebuild 2>&1"
     assert:
       type: regex
       conditions:

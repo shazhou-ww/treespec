@@ -2,7 +2,7 @@ description: "verify warning for spec.yaml subdir not declared in primary/branch
 steps:
   - type: exec
     description: "add warning-demo and validate — expect warning"
-    command: "cp -r /app/spec/assets/spec/warning-demo /workspace/bootstrap-project/spec/warning-demo && treespec validate --config /workspace/bootstrap-project/treespec.yaml 2>&1"
+    command: "cp -r /app/spec/assets/spec/warning-demo /workspace/greeting/spec/warning-demo && treespec validate --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex
       conditions:

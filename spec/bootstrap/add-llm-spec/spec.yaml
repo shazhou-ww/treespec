@@ -4,7 +4,7 @@ env:
 steps:
   - type: exec
     description: "copy llm-assert spec into project"
-    command: "cp -r /app/spec/assets/spec/llm-assert /workspace/bootstrap-project/spec/llm-assert"
+    command: "cp -r /app/spec/assets/spec/llm-assert /workspace/greeting/spec/llm-assert"
     assert:
       type: regex
       conditions:

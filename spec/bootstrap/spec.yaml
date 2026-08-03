@@ -1,36 +1,32 @@
 description: "init a treespec project and install SUT (greet CLI)"
 steps:
   - type: exec
-    description: "init bootstrap project"
-    command: "rm -rf /workspace/bootstrap-project && treespec init /workspace/bootstrap-project --name bootstrap 2>&1"
+    description: "create project dir and install SUT (greet CLI)"
+    command: "rm -rf /workspace/greeting && mkdir -p /workspace/greeting && cp -r /app/spec/assets/sut /workspace/greeting/sut && chmod +x /workspace/greeting/sut/src/index.js && mkdir -p /workspace/greeting/node_modules/.bin && ln -sf ../../sut/src/index.js /workspace/greeting/node_modules/.bin/greet"
+    assert:
+      type: regex
+      conditions:
+        - { path: "exit_code", regex: "^0$" }
+  - type: exec
+    description: "init treespec in existing project"
+    command: "treespec init /workspace/greeting --name greeting 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "Created treespec project" }
-        - { path: "stdout", regex: "bootstrap" }
+        - { path: "stdout", regex: "greeting" }
         - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    description: "install SUT — copy greet CLI, link into node_modules/.bin"
-    command: "cp -r /app/spec/assets/sut /workspace/bootstrap-project/sut && chmod +x /workspace/bootstrap-project/sut/src/index.js && mkdir -p /workspace/bootstrap-project/node_modules/.bin && ln -sf ../../sut/src/index.js /workspace/bootstrap-project/node_modules/.bin/greet"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    description: "add docker network: host config"
-    command: "printf '\\ndocker:\\n  network: host\\n' >> /workspace/bootstrap-project/treespec.yaml"
-    assert:
-      type: regex
-      conditions:
-        - { path: "exit_code", regex: "^0$" }
-  - type: exec
-    description: "verify project setup"
-    command: "test -f /workspace/bootstrap-project/treespec.yaml && test -f /workspace/bootstrap-project/spec/Dockerfile && test -x /workspace/bootstrap-project/node_modules/.bin/greet && echo ok"
-    assert:
-      type: regex
-      conditions:
-        - { path: "stdout", regex: "ok" }
-        - { path: "exit_code", regex: "^0$" }
+postcon:
+  - name: verify-setup
+    steps:
+      - type: exec
+        description: "verify project setup in committed state"
+        command: "test -f /workspace/greeting/treespec.yaml && test -f /workspace/greeting/spec/Dockerfile && test -x /workspace/greeting/node_modules/.bin/greet && echo ok"
+        assert:
+          type: regex
+          conditions:
+            - { path: "stdout", regex: "ok" }
+            - { path: "exit_code", regex: "^0$" }
 primary: add-specs
 branches:
   - add-bad-spec

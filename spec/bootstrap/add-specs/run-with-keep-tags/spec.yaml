@@ -2,7 +2,7 @@ description: "run with --keep-tags to leave ephemeral tags"
 steps:
   - type: exec
     description: "run single spec with --keep-tags"
-    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml greet/init/configure/verify --no-trace --keep-tags 2>&1"
+    command: "treespec run --config /workspace/greeting/treespec.yaml greet/init/configure/verify --no-trace --keep-tags 2>&1"
     assert:
       type: regex
       conditions:

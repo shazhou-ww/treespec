@@ -2,7 +2,7 @@ description: "add greet spec tree with state-dependent structure"
 steps:
   - type: exec
     description: "copy greet spec tree into project"
-    command: "cp -r /app/spec/assets/spec/greet /workspace/bootstrap-project/spec/greet"
+    command: "cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/greet"
     assert:
       type: regex
       conditions:

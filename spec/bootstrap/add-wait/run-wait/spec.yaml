@@ -2,7 +2,7 @@ description: "run wait spec — expect 1 passed"
 steps:
   - type: exec
     description: "run wait-poll spec"
-    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml wait-poll --no-trace --rebuild 2>&1"
+    command: "treespec run --config /workspace/greeting/treespec.yaml wait-poll --no-trace --rebuild 2>&1"
     assert:
       type: regex
       conditions:

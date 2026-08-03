@@ -2,7 +2,7 @@ description: "run pruning fixture — expect 1 failed, 1 skipped"
 steps:
   - type: exec
     description: "run prune-parent spec"
-    command: "treespec run --config /workspace/bootstrap-project/treespec.yaml prune-parent --no-trace --rebuild 2>&1; true"
+    command: "treespec run --config /workspace/greeting/treespec.yaml prune-parent --no-trace --rebuild 2>&1; true"
     assert:
       type: regex
       conditions:

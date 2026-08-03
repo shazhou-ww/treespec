@@ -2,7 +2,7 @@ description: "verify error when branches declared without primary"
 steps:
   - type: exec
     description: "add no-primary-demo and validate — expect error"
-    command: "cp -r /app/spec/assets/spec/no-primary-demo /workspace/bootstrap-project/spec/no-primary-demo && treespec validate --config /workspace/bootstrap-project/treespec.yaml 2>&1; [ $? -ne 0 ]"
+    command: "cp -r /app/spec/assets/spec/no-primary-demo /workspace/greeting/spec/no-primary-demo && treespec validate --config /workspace/greeting/treespec.yaml 2>&1; [ $? -ne 0 ]"
     assert:
       type: regex
       conditions:
