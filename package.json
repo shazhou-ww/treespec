@@ -5,14 +5,14 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "treespec": "bin/treespec.js"
+    "treespec": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "dev": "tsx src/index.ts",
     "validate": "tsx src/index.ts validate",
     "start": "tsx src/index.ts",
-    "prepack": "tsc"
+    "prepack": "npm run build"
   },
   "keywords": [
     "testing",
@@ -32,8 +32,7 @@
   "homepage": "https://git.shazhou.work/shazhou/treespec",
   "files": [
     "dist",
-    "help",
-    "bin"
+    "help"
   ],
   "dependencies": {
     "dockerode": "^5.0.1",

@@ -10,8 +10,6 @@ WORKDIR /app
 # Add node_modules/.bin to PATH so project dependencies' CLIs are directly callable.
 ENV PATH="/app/node_modules/.bin:$PATH"
 
-# Static wrapper for the project's own CLI (not in node_modules/.bin at runtime,
-# since the project isn't a dependency of itself).
-RUN echo '#!/bin/sh' > /usr/local/bin/treespec && \
-    echo 'exec node /app/dist/index.js "$@"' >> /usr/local/bin/treespec && \
-    chmod +x /usr/local/bin/treespec
+# dist/index.js has #!/usr/bin/env node shebang + execute permission (set by build).
+# Symlink it so `treespec` is callable from anywhere.
+RUN ln -s /app/dist/index.js /usr/local/bin/treespec
