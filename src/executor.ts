@@ -172,7 +172,7 @@ export async function createAndStartContainer(
 export async function execInContainer(
 	containerId: string,
 	command: string,
-	options: { timeout?: number } = {},
+	options: { timeout?: number; cwd?: string } = {},
 ): Promise<ExecResult> {
 	const docker = getDocker();
 	const container = docker.getContainer(containerId);
@@ -187,6 +187,7 @@ export async function execInContainer(
 	try {
 		const exec = await container.exec({
 			Cmd: ['/bin/sh', '-c', command],
+			...(options.cwd ? { WorkingDir: options.cwd } : {}),
 			AttachStdout: true,
 			AttachStderr: true,
 		});

@@ -854,8 +854,8 @@ spec: spec
 WORKDIR /app
 
 # Project source, node_modules, and dist are mounted from host at runtime.
-# Add node_modules/.bin to PATH so project CLIs are directly callable.
-ENV PATH="/app/node_modules/.bin:$PATH"
+# Add bin/ and node_modules/.bin to PATH so project CLIs are directly callable.
+ENV PATH="/app/bin:/app/node_modules/.bin:$PATH"
 `;
 
 		const exampleSpec = `description: "example — echo hello"

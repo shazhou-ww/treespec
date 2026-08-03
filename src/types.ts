@@ -85,6 +85,8 @@ export interface ExecStep {
 	type: 'exec';
 	/** Shell command to execute inside the container. Supports $ENV_VAR substitution. */
 	command: string;
+	/** Working directory inside the container. Default: container's WorkingDir. */
+	cwd?: string;
 	/** Human-readable description shown in output. Falls back to command if omitted. */
 	description?: string;
 	/** Duration string: "30s", "2m", "1h". Default: "30s". */

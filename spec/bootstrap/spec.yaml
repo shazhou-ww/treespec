@@ -4,8 +4,9 @@ steps:
     description: "copy SUT (greet CLI) into project root"
     command: "rm -rf /workspace/greeting && mkdir -p /workspace/greeting && cp -r /app/spec/assets/sut/. /workspace/greeting/"
   - type: exec
-    description: "link greet to node_modules/.bin (PATH entry)"
-    command: "chmod +x /workspace/greeting/src/index.js && mkdir -p /workspace/greeting/node_modules/.bin && ln -sf ../../src/index.js /workspace/greeting/node_modules/.bin/greet"
+    description: "link greet to bin/ (PATH entry)"
+    cwd: /workspace/greeting
+    command: "chmod +x src/index.js && mkdir -p bin && ln -sf ../src/index.js bin/greet"
   - type: exec
     description: "init treespec in existing project"
     command: "treespec init /workspace/greeting --name greeting 2>&1"
@@ -19,10 +20,11 @@ postcon:
     steps:
       - type: exec
         description: "verify project setup in committed state"
+        cwd: /workspace/greeting
         command: |
-          test -f /workspace/greeting/treespec.yaml &&
-          test -f /workspace/greeting/spec/Dockerfile &&
-          test -x /workspace/greeting/node_modules/.bin/greet &&
+          test -f treespec.yaml &&
+          test -f spec/Dockerfile &&
+          test -x bin/greet &&
           echo ok
         assert:
           type: regex

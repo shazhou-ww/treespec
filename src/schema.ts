@@ -60,6 +60,7 @@ const WaitConfigSchema = z.object({
 const ExecStepSchema = z.object({
 	type: z.literal('exec'),
 	command: z.string().min(1),
+	cwd: z.string().min(1).optional(),
 	description: z.string().optional(),
 	timeout: z.string().min(1).optional(),
 	assert: AssertionSchema.optional(),
