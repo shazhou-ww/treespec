@@ -33,6 +33,7 @@
   "files": [
     "dist",
     "help",
+    "docs",
     "bin"
   ],
   "dependencies": {

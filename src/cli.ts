@@ -80,8 +80,10 @@ function getPositionalArgs(args: string[]): string[] {
 		'--env-file',
 		'--image',
 		'--output',
-	'--name',
-]);
+		'--name',
+		'--section',
+		'-s',
+	]);
 	const result: string[] = [];
 	for (let i = 0; i < args.length; i++) {
 		const a = args[i]!;
@@ -1114,6 +1116,112 @@ export async function runShow(args: string[]): Promise<number> {
 	return 0;
 }
 
+// ─── docs ───────────────────────────────────────────────────
+
+const DOCS_SCENARIOS = ['writing-tests', 'running-tests', 'diagnosing-failures'] as const;
+
+function loadDoc(name: string): string | null {
+	const docPath = join(__moduleDir, '..', 'docs', `${name}.md`);
+	try {
+		return readFileSync(docPath, 'utf8');
+	} catch {
+		return null;
+	}
+}
+
+/** Parse `## N. Title` sections from a markdown document. Returns array of {title, body}. */
+function parseSections(content: string): { title: string; body: string }[] {
+	const lines = content.split('\n');
+	const sections: { title: string; body: string }[] = [];
+	let currentTitle = '';
+	let currentBody: string[] = [];
+
+	for (const line of lines) {
+		const match = line.match(/^##\s+(.*)$/);
+		if (match) {
+			if (currentTitle) {
+				sections.push({ title: currentTitle, body: currentBody.join('\n').trimEnd() });
+			}
+			currentTitle = match[1]!;
+			currentBody = [];
+		} else if (currentTitle) {
+			currentBody.push(line);
+		}
+	}
+	if (currentTitle) {
+		sections.push({ title: currentTitle, body: currentBody.join('\n').trimEnd() });
+	}
+	return sections;
+}
+
+export async function runDocs(args: string[]): Promise<number> {
+	const positionals = getPositionalArgs(args);
+	const scenario = positionals[0];
+
+	// No scenario → print index (table of contents)
+	if (!scenario) {
+		console.log(loadDoc('index') ?? '( docs/index.md not found )');
+		console.log();
+		console.log('Available scenarios:');
+		for (const s of DOCS_SCENARIOS) {
+			const content = loadDoc(s);
+			if (content) {
+				const firstLine = content.split('\n')[0]?.replace(/^#\s+/, '') ?? s;
+				console.log(`  ${s.padEnd(22)} ${firstLine}`);
+			}
+		}
+		return 0;
+	}
+
+	if (!DOCS_SCENARIOS.includes(scenario as (typeof DOCS_SCENARIOS)[number])) {
+		console.error(`Unknown scenario: ${scenario}`);
+		console.error(`Available: ${DOCS_SCENARIOS.join(', ')}`);
+		return 1;
+	}
+
+	const content = loadDoc(scenario);
+	if (!content) {
+		console.error(`( docs/${scenario}.md not found )`);
+		return 1;
+	}
+
+	const listMode = hasFlag(args, '--list');
+	const sectionNum = getFlagValue(args, '-s') ?? getFlagValue(args, '--section');
+
+	if (listMode) {
+		const sections = parseSections(content);
+		if (sections.length === 0) {
+			console.log('( no sections found )');
+		} else {
+			for (const s of sections) {
+				console.log(s.title);
+			}
+		}
+		return 0;
+	}
+
+	if (sectionNum !== undefined) {
+		const num = parseInt(sectionNum, 10);
+		if (Number.isNaN(num) || num < 1) {
+			console.error(`Invalid section number: ${sectionNum}`);
+			return 1;
+		}
+		const sections = parseSections(content);
+		if (num > sections.length) {
+			console.error(`Section ${num} not found (max: ${sections.length})`);
+			return 1;
+		}
+		const section = sections[num - 1]!;
+		console.log(`## ${section.title}`);
+		console.log(section.body);
+		return 0;
+	}
+
+	// Default: print full document
+	console.log(content.trimEnd());
+	return 0;
+}
+
 export async function runClean(_args: string[]): Promise<number> {
 	try {
 		await ensureDockerd();
@@ -1195,6 +1303,15 @@ export async function runCli(argv: string[]): Promise<number> {
 			return 0;
 		}
 		return runClean(subArgs);
+	}
+
+	if (command === 'docs') {
+		const subArgs = args.slice(1);
+		if (hasFlag(subArgs, '--help') || hasFlag(subArgs, '-h')) {
+			console.log(loadDoc('index') ?? '( docs/index.md not found )');
+			return 0;
+		}
+		return runDocs(subArgs);
 	}
 
 	if (command === 'show') {
