@@ -8,7 +8,7 @@ Commands:
   treespec show <trace.jsonl>         Replay a trace as human-readable output
   treespec validate [--config <path>] Check config + spec tree for errors
   treespec tree [--config <path>]     Visualize the full test tree structure
-  treespec lineage [node] [options]  Show the primary descent line (大宗)
+  treespec lineage [node] [options]  Show the primary descent line
   treespec init <path>                Create a project scaffold
   treespec clean                      Remove all ephemeral image tags
   treespec docs [scenario]           Detailed documentation by scenario

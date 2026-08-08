@@ -1,4 +1,4 @@
-treespec lineage — show the primary descent line (大宗)
+treespec lineage — show the primary descent line
 
 Usage: treespec lineage [node] [options]
 
