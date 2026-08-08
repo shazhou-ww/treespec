@@ -3,18 +3,81 @@
 How to write treespec test cases: spec.yaml format, step types, assertions,
 wait, postcon, tree design principles, and worked examples.
 
+## 0. How treespec Works
+
+treespec is a **tree-structured, stateful test system**. It runs tests as a
+tree of Docker containers, where each node is both a **state** and the
+**transition** that produced it.
+
+### Core model
+
+```
+                    Dockerfile
+                       │
+                       ▼
+                   base image (S₀)
+                       │
+                ┌──────┴──────┐
+                │             │
+            node A          node B        ← each node = one Docker container
+          (state S_A)    (state S_B)         started from parent's image
+                │
+          ┌─────┴─────┐
+          │           │
+        node A1     node A2     ← child containers started from A's committed image
+```
+
+- **Node = state + edge.** Each node is a state in the system, reached by
+  executing the parent's steps. The node's `spec.yaml` defines the *edge* —
+  the transition from the parent's state to this node's state.
+- **Container per node.** Each test node runs in its own Docker container.
+  The root node's container is built from a Dockerfile (the base image, S₀).
+  Child nodes start from the parent's committed image — they inherit the
+  parent's filesystem state.
+- **Edge = steps + assertions.** Each `spec.yaml` declares steps (shell
+  commands or HTTP requests) to execute inside the container, and assertions
+  to verify the result. Steps mutate the container's state; assertions check
+  it. If all assertions pass, the container is `docker commit`-ed into a new
+  image tag that child nodes will start from.
+- **Postcon = snapshot verification.** After steps complete and the image is
+  committed, postcon runs in a **fresh container** from that committed
+  snapshot. This lets you verify persisted state — e.g., "did the file
+  survive?" or "is the database row still there?" Postcon can perform
+  mutable operations (write, delete, modify) on the snapshot without
+  affecting the committed image or subsequent nodes.
+
+### Execution flow
+
+```
+1. Build base image from Dockerfile (S₀)
+2. Start container from S₀ (or parent's tag)
+3. Execute steps via docker exec
+   ├── assert passes → docker commit → new image tag
+   └── assert fails   → node FAIL, prune subtree
+4. Run postcon in fresh container from committed tag
+   ├── pass → children can proceed
+   └── fail → node FAIL, prune subtree
+5. Recurse into children (DFS)
+```
+
+### Node types
+
+| Type | Has `spec.yaml`? | Role |
+|---|---|---|
+| **Test node** | Yes | Part of the test tree. Executes steps, asserts, may commit. |
+| **Assets node** | No | Fixture data (configs, inputs). Not part of the test tree. |
+
+### Child discovery
+
+Children are **explicitly declared** in `spec.yaml` via `primary` (the
+main-line child) and `branches` (side branches). Directory nesting alone
+does not create parent-child relationships.
+
 ## 1. Test Tree Structure
 
-The directory tree IS the test tree. Two kinds of nodes:
-
-- **Test node** — any folder with a `spec.yaml`. Executes steps, may commit.
-- **Assets node** — any folder *without* a `spec.yaml`. Not part of the test
-  tree; serves as fixture data (config files, test inputs, etc.).
-
-Parent-child relationships are determined by the `primary` and `branches`
-fields in `spec.yaml`, **not** by directory nesting alone. A subdirectory
-with `spec.yaml` that is not declared in `primary`/`branches` triggers a
-warning.
+The directory tree IS the test tree. Test nodes are folders with `spec.yaml`;
+assets nodes (folders without `spec.yaml`) are fixture data, not part of the
+tree.
 
 ```
 spec/                         # specs root (configurable in treespec.yaml)
