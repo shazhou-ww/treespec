@@ -63,6 +63,12 @@ export function printHelp(): void {
 	console.log(loadHelp('main'));
 }
 
+/** Read version from package.json. */
+export function getVersion(): string {
+	const pkg = JSON.parse(readFileSync(join(__moduleDir, '..', 'package.json'), 'utf8'));
+	return pkg.version ?? '0.0.0';
+}
+
 function getFlagValue(args: string[], name: string): string | undefined {
 	const idx = args.indexOf(name);
 	if (idx === -1) return undefined;
@@ -1248,6 +1254,11 @@ export async function runCli(argv: string[]): Promise<number> {
 
 	if (!command || command === 'help' || command === '--help' || command === '-h') {
 		printHelp();
+		return 0;
+	}
+
+	if (command === '--version' || command === '-V') {
+		console.log(`treespec v${getVersion()}`);
 		return 0;
 	}
 
