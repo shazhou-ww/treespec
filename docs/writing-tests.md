@@ -195,7 +195,155 @@ Postcon container is isolated — mutations don't affect the committed image.
 Multiple postcons run serially (peak: 1 mutator + 1 probe container).
 Postcon failure → same as step failure: prune children.
 
-## 7. Docker Commit Chain (State Isolation Model)
+## 7. Container Runtime & Dockerfile
+
+### How Containers Start
+
+Each test node runs in a Docker container created from the base image (or
+parent's committed image). The container is **long-running** — it starts with
+`sleep infinity` and stays alive while steps are executed via `docker exec`.
+
+```
+┌─────────────────────────────────────────────┐
+│  Container (from base image or parent tag) │
+│                                             │
+│  /app/                    ← projectDir :ro  │  (bind mount from host)
+│    ├── spec/              ← specs root      │
+│    │   ├── provider-add/  ← current node    │  ← WorkingDir
+│    │   │   ├── spec.yaml                     │
+│    │   │   └── assets/   ← fixture data      │
+│    │   └── model-add/                      │
+│    ├── package.json                          │
+│    ├── node_modules/   (skipped in build)   │
+│    └── dist/          (skipped in build)   │
+│                                             │
+│  Cmd: sleep infinity                        │
+│  Privileged: true  (for DinD)               │
+│  Network: bridge (configurable)            │
+└─────────────────────────────────────────────┘
+```
+
+Key properties:
+
+- **`/app` — project root, mounted read-only** from `projectDir` (default:
+  treespec.yaml's directory). All project source, config, and node_modules
+  are visible inside the container at `/app`. Read-only — test steps cannot
+  modify project files (state mutations happen via docker commit, not
+  filesystem writes to /app).
+- **WorkingDir** — set to `/app/<specRelative>/<nodePath>`. For example,
+  if `spec: spec` and the current node is `provider-add`, the working
+  directory is `/app/spec/provider-add`. Step commands run from here.
+- **`assets/`** — each node's `assets/` directory is accessible at
+  `/app/<specRelative>/<nodePath>/assets/` inside the container. Use it for
+  fixture data (config files, test inputs).
+- **Environment** — env vars from `.env` file and shell environment are
+  injected into the container. The `env` field in spec.yaml declares
+  required vars (missing → SKIP this node).
+- **Network** — default: bridge. Set `docker.network: host` in
+  treespec.yaml for host networking. HTTP steps run inside the container
+  via `node -e fetch`, so they can access container-local services
+  (`localhost:PORT`) regardless of network mode.
+- **Privileged mode** — containers run privileged, required for DinD
+  (Docker-in-Docker). Each container runs its own `dockerd`; no host
+  `docker.sock` is mounted. This means test steps can build images and run
+  sibling containers inside the test container.
+
+### Dockerfile: Mount Mode vs Build Mode
+
+The base image (S₀) is built from the Dockerfile specified in
+`image.dockerfile`. There are two approaches:
+
+#### Mount Mode (default)
+
+The Dockerfile is minimal — just sets up the base image with system deps.
+The project directory is mounted read-only at `/app` at runtime. Source code,
+`node_modules`, and built artifacts are all from the host — no rebuild needed
+when code changes.
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+ENV PATH="/app/bin:/app/node_modules/.bin:$PATH"
+```
+
+Because `/app` is a bind mount, everything under the project directory on the
+host is visible inside the container — including host-compiled `node_modules/`
+and `dist/`. This is fast but may break if the host and container have
+different libc (e.g. host glibc, container Alpine musl).
+
+**Pros:** Fast iteration — change code on host, re-run immediately.
+**Cons:** Host-compiled native modules may not work in the container. Modules
+like `better-sqlite3`, `sharp`, `canvas` are compiled for the host's libc,
+which may not match the container's libc.
+**Best for:** Pure JS/TS projects, or projects whose dependencies are all
+pure JS.
+
+#### Build Mode
+
+The Dockerfile is complete — COPY + install + build all inside the container.
+Everything is compiled in the correct environment. Use a **different WORKDIR**
+(e.g. `/opt/project`) to avoid the `/app` bind mount overlaying the
+baked-in files.
+
+```dockerfile
+FROM node:22-alpine
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /opt/project
+COPY . .
+RUN npm install
+RUN npx tsc --build
+
+RUN ln -sf /opt/project/node_modules/.bin/* /usr/local/bin/
+ENV PATH="/opt/project/bin:/opt/project/node_modules/.bin:$PATH"
+```
+
+Note: `/app` is still mounted (read-only) in every container — this is
+hardcoded. Build mode works by installing the project to a **different path**
+(`/opt/project`), so the `/app` mount doesn't shadow it. The `/app` mount
+still provides read-only access to project source if needed.
+
+Run with `--rebuild` to force image rebuild when dependencies change.
+
+**Pros:** Full compatibility — native modules compiled for the correct
+libc/arch.
+**Cons:** Slower — every dependency change requires `--rebuild`.
+**Best for:** Projects with native Node modules, or when host and container
+have different libc.
+
+#### Comparison
+
+| | Mount Mode | Build Mode |
+|---|---|---|
+| Dockerfile | Minimal (system deps only) | Complete (COPY + install + build) |
+| Source / node_modules | From host (bind mount `/app:ro`) | Baked into image (at `/opt/project`) |
+| Iteration speed | Fast (no rebuild) | Slower (`--rebuild` needed) |
+| Native module compat | Host-dependent | Container-native ✓ |
+| WORKDIR | `/app` (matches mount) | `/opt/project` (avoids mount overlay) |
+
+#### Build Context Exclusions
+
+`buildImage` always excludes these from the Docker build context:
+
+```
+.git  node_modules  dist  .treespec-output
+```
+
+In build mode, you must run `npm install` and `tsc --build` **inside** the
+Dockerfile — don't rely on host-compiled `dist/` or `node_modules/` being
+available during image build.
+
+#### Choosing
+
+```
+Pure JS project?                        → Mount mode (default)
+Native modules (better-sqlite3, sharp)? → Build mode
+Host and container same libc?           → Mount mode works
+Host glibc, container Alpine (musl)?    → Build mode required
+```
+
+## 8. Docker Commit Chain (State Isolation Model)
 
 ```
 Parent node executes steps → docker commit → new image tag.
@@ -219,7 +367,7 @@ fails-on-purpose/          # exit 1 → FAIL
   should-be-skipped/       # SKIP (parent failed, state untrustworthy)
 ```
 
-## 8. Tree Design Principles
+## 9. Tree Design Principles
 
 ### Core model: nodes are STATES, edges are TRANSITIONS
 
@@ -269,7 +417,7 @@ parent state --[run-all]--------> child state (results produced)
    Put invalid specs in a separate subtree so they don't pollute
    the main validation flow.
 
-## 9. Example: Self-Test Bootstrap Tree
+## 10. Example: Self-Test Bootstrap Tree
 
 ```
 bootstrap/
