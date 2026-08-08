@@ -1,15 +1,9 @@
-treespec lineage — show the primary descent line (大宗)
-
-Show the main line of succession: from a given node, follow the `primary`
-field chain upward to root (先祖) and downward to leaf (大宗).
-
-Output is a linear list — not a tree — because this is a path, not a hierarchy.
-Contrast with `tree` which shows the full tree including all branches (小宗).
+treespec lineage — show the primary descent line
 
 Usage: treespec lineage [node] [options]
 
 Node: optional path (relative to specs root) or spec.yaml file path.
-  If omitted, starts from root — shows the full main line.
+If omitted, starts from root — shows the full main line.
 
 Options:
   --only-descends        Show only descendants (start → leaf, no ancestors)
@@ -21,87 +15,4 @@ Options:
   --config <path>        Override treespec.yaml path
   -h, --help             Show this help
 
-═══════════════════════════════════════════════════════════════
-
-Scope modes:
-
-  Default (no flag):
-    root → ... → [start] → ... → leaf
-    Full main line through the node: ancestors + descendants.
-
-  --only-descends:
-    [start] → ... → leaf
-    Just the primary path downward. Useful to see "what happens next
-    on the main line from here."
-
-  --only-ancestors:
-    root → ... → [start]
-    Just the ancestor chain. The starting node is marked with ← here.
-    (Starting node's own steps/asserts still shown per detail flags.)
-
-  --only-descends and --only-ancestors are mutually exclusive.
-
-═══════════════════════════════════════════════════════════════
-
-Detail levels (composable):
-
-  Default:    node name + description (one line per node)
-  --steps:    + steps (type, command, timeout, wait)
-  --asserts:  + assert (type, conditions for regex; expression for jsonata; prompt for llm)
-  --postcon:  + postcon (name + step count)
-  -v:         all of the above
-
-═══════════════════════════════════════════════════════════════
-
-Examples:
-
-  Default (from root, names only):
-
-    $ treespec lineage
-
-    root — treespec self-test tree root
-    bootstrap — init a treespec project and install SUT (greet CLI)
-    add-specs — copy all spec trees into project at once
-    validate — validate project with all specs
-
-  Ancestors only (from a node):
-
-    $ treespec lineage bootstrap/add-specs --only-ancestors
-
-    root — treespec self-test tree root
-    bootstrap — init a treespec project and install SUT (greet CLI)
-    add-specs — copy all spec trees into project at once ← here
-
-  Descends only, verbose:
-
-    $ treespec lineage bootstrap/add-specs --only-descends -v
-
-    add-specs — copy all spec trees into project at once
-      steps:
-        1. exec: cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/ && ...
-      primary → validate
-    validate — validate project with all specs
-      steps:
-        1. exec: treespec validate --config /workspace/greeting/treespec.yaml ...
-      assert: regex /Valid/
-      (leaf)
-
-═══════════════════════════════════════════════════════════════
-
-Pitfalls:
-
-1. Lineage follows `primary` field only. Nodes that are branches (小宗)
-   are not on the main line — use `tree` to see all branches.
-
-2. If the starting node is a branch (not reachable via primary chain from
-   root), --only-ancestors shows nothing. The node's own primary descendants
-   still work with --only-descends.
-
-3. If the starting node has no primary child, the descendant line ends
-   immediately (leaf node). Use --only-ancestors to see its context.
-
-4. Organizational nodes (no spec.yaml) appear in the lineage if they are
-   on the primary path — they pass through without execution.
-
-5. --only-descends and --only-ancestors cannot be combined. If both are
-   passed, --only-ancestors takes precedence (shows the shorter path).
+For lineage details and diagnosing failures, run: treespec docs diagnosing-failures
