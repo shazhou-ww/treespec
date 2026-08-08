@@ -219,8 +219,8 @@ descendants, or `tree` to see the full tree.
 1. If the starting node has no primary child, the descendant line ends
    immediately (leaf node). Use `--only-ancestors` to see its context.
 
-2. Organizational nodes (no spec.yaml) appear in the lineage if they are on
-   the primary path — they pass through without execution.
+2. Assets nodes (directories without `spec.yaml`) are not part of the test
+   tree and never appear in lineage. Only test nodes with `spec.yaml` do.
 
 3. `--only-descends` and `--only-ancestors` cannot be combined. If both are
    passed, `--only-ancestors` takes precedence (shows the shorter path).

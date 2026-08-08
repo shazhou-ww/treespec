@@ -6,4 +6,4 @@ Options:
   --config <path>   Override treespec.yaml path
   -h, --help         Show this help
 
-Markers: [org] = organizational node, [env: VAR] = required env, [postcon: name] = post-condition.
+Markers: [env: VAR] = required env, [postcon: name] = post-condition.

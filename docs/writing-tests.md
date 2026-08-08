@@ -5,27 +5,36 @@ wait, postcon, tree design principles, and worked examples.
 
 ## 1. Test Tree Structure
 
-The directory tree IS the test tree. Each folder with a `spec.yaml` is a test
-node. Directories without `spec.yaml` are organizational (pass-through).
+The directory tree IS the test tree. Two kinds of nodes:
+
+- **Test node** — any folder with a `spec.yaml`. Executes steps, may commit.
+- **Assets node** — any folder *without* a `spec.yaml`. Not part of the test
+  tree; serves as fixture data (config files, test inputs, etc.).
+
+Parent-child relationships are determined by the `primary` and `branches`
+fields in `spec.yaml`, **not** by directory nesting alone. A subdirectory
+with `spec.yaml` that is not declared in `primary`/`branches` triggers a
+warning.
 
 ```
 spec/                         # specs root (configurable in treespec.yaml)
-├── provider-add/              #   folder = node name
-│   ├── spec.yaml             #   has spec.yaml → test node
-│   ├── assets/               #   reserved: mounted via /specs, skipped by scanner
-│   │   └── config.json       #   fixture data accessible to this node + children
-│   └── model-add/            #   child node (inherits committed state)
+├── provider-add/              #   test node (has spec.yaml)
+│   ├── spec.yaml             #   ← declares primary: model-add
+│   ├── config.json           #   fixture files directly in the node dir
+│   ├── data/                 #   assets node (no spec.yaml → fixture data)
+│   │   └── seed.sql          #   accessible at /app/spec/provider-add/data/
+│   └── model-add/            #   child test node (declared in parent's primary)
 │       └── spec.yaml
 └── standalone-test/
-    └── spec.yaml             #   leaf node (no children, no commit)
+    └── spec.yaml             #   leaf node (no children → no commit)
 ```
 
 Rules:
 - Has spec.yaml → test node (executes steps, may commit)
-- No spec.yaml + has subdirs → organizational node (pass-through, no exec/commit)
-- No spec.yaml + no subdirs → ERROR
+- No spec.yaml → assets node (fixture data, not part of the test tree)
 - Directory name = node name (verb phrase recommended)
-- `assets/` is always skipped by the scanner — even if it contains spec.yaml
+- Children are explicit: declare them in `primary` and/or `branches`
+- A subdirectory with spec.yaml not listed in primary/branches → warning
 
 ## 2. spec.yaml Format
 
@@ -211,7 +220,9 @@ parent's committed image). The container is **long-running** — it starts with
 │    ├── spec/              ← specs root      │
 │    │   ├── provider-add/  ← current node    │  ← WorkingDir
 │    │   │   ├── spec.yaml                     │
-│    │   │   └── assets/   ← fixture data      │
+│    │   │   ├── config.json   ← fixture files  │
+│    │   │   └── data/        ← assets node     │
+│    │   │       └── seed.sql  (no spec.yaml)   │
 │    │   └── model-add/                      │
 │    ├── package.json                          │
 │    ├── node_modules/   (skipped in build)   │
@@ -233,9 +244,10 @@ Key properties:
 - **WorkingDir** — set to `/app/<specRelative>/<nodePath>`. For example,
   if `spec: spec` and the current node is `provider-add`, the working
   directory is `/app/spec/provider-add`. Step commands run from here.
-- **`assets/`** — each node's `assets/` directory is accessible at
-  `/app/<specRelative>/<nodePath>/assets/` inside the container. Use it for
-  fixture data (config files, test inputs).
+- **Assets** — any subdirectory without `spec.yaml` is an assets node. It
+  is not part of the test tree (no steps, no commit). Fixture files are
+  accessible inside the container at `/app/<specRelative>/<nodePath>/<dir>/`.
+  The directory name is arbitrary — `data/`, `fixtures/`, `config/`, etc.
 - **Environment** — env vars from `.env` file and shell environment are
   injected into the container. The `env` field in spec.yaml declares
   required vars (missing → SKIP this node).
@@ -445,8 +457,10 @@ bootstrap/
 3. Timeout is per-step. `wait.timeout` is total polling time (can exceed step
    timeout).
 
-4. Organizational nodes (no spec.yaml) pass through parent's tag unchanged.
-   They don't execute or commit — just a grouping mechanism.
+4. Directories without `spec.yaml` are assets nodes — fixture data, not part
+   of the test tree. The scanner ignores them; they're accessible inside the
+   container via the `/app` bind mount. Directory name is arbitrary.
 
-5. `assets/` is ALWAYS skipped, even if it contains spec.yaml files.
-   Don't put active test specs in `assets/` — they're fixture data.
+5. A subdirectory with `spec.yaml` that is not declared in the parent's
+   `primary`/`branches` triggers a warning. Declare all child test nodes
+   explicitly.
