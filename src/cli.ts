@@ -29,7 +29,6 @@ import {
 	scanSpecs,
 	type TreeNode,
 } from './scanner.js';
-import { isHttpStepResult } from './steps.js';
 import { createTraceWriter } from './trace.js';
 
 const RESET = '\x1b[0m';
@@ -549,33 +548,26 @@ export async function runRun(args: string[]): Promise<number> {
 					`${pad}${CYAN}▶${RESET} ${BOLD}${label}${RESET}${desc}  ${colorStatus(result.status)}  ${DIM}${result.reason}${RESET}`,
 				);
 			},
-			onStep: ({ depth, index, stepSummary, stepResult, verdict, reason, context, postconName }) => {
-				const pad = '  '.repeat(depth + 1);
-				const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-				const detail = isHttpStepResult(stepResult)
-					? `${DIM}status ${stepResult.status}${RESET}`
-					: `${DIM}exit ${stepResult.exit_code}${RESET}`;
-				const prefix = context === 'postcon' ? `postcon ${postconName} ` : '';
-				console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${detail}`);
-				if (verdict === 'FAIL') {
-					console.log(`${pad}  ${RED}${reason}${RESET}`);
+		onStep: ({ depth, index, stepSummary, stepResult, verdict, reason, context, postconName }) => {
+			const pad = '  '.repeat(depth + 1);
+			const mark = verdict === 'PASS' ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+			const detail = `${DIM}exit ${stepResult.exit_code}${RESET}`;
+			const prefix = context === 'postcon' ? `postcon ${postconName} ` : '';
+			console.log(`${pad}${mark} ${prefix}step ${index + 1}: ${stepSummary}  ${detail}`);
+			if (verdict === 'FAIL') {
+				console.log(`${pad}  ${RED}${reason}${RESET}`);
+			}
+			if (verbose) {
+				if (stepResult.stdout) {
+					console.log(`${pad}  ${DIM}stdout:${RESET}`);
+					console.log(stepResult.stdout);
 				}
-				if (verbose) {
-					if (isHttpStepResult(stepResult)) {
-						console.log(`${pad}  ${DIM}body:${RESET}`);
-						console.log(stepResult.body);
-					} else {
-						if (stepResult.stdout) {
-							console.log(`${pad}  ${DIM}stdout:${RESET}`);
-							console.log(stepResult.stdout);
-						}
-						if (stepResult.stderr) {
-							console.log(`${pad}  ${DIM}stderr:${RESET}`);
-							console.log(stepResult.stderr);
-						}
-					}
+				if (stepResult.stderr) {
+					console.log(`${pad}  ${DIM}stderr:${RESET}`);
+					console.log(stepResult.stderr);
 				}
-			},
+			}
+		},
 		});
 
 		printSummary(summary);
@@ -643,14 +635,10 @@ function formatStepDetails(steps: TreeNode['spec']['steps']): string[] {
 	lines.push('  steps:');
 	steps.forEach((step, i) => {
 		const num = `${i + 1}.`;
-		if (step.type === 'exec') {
-			// Show first line only for readability; multi-line commands (heredocs) are truncated
-			const firstLine = step.command.split('\n')[0] ?? '';
-			const cmd = firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine;
-			lines.push(`    ${num} exec: ${cmd}`);
-		} else {
-			lines.push(`    ${num} http: ${step.request.method} ${step.request.url}`);
-		}
+		// Show first line only for readability; multi-line commands (heredocs) are truncated
+		const firstLine = step.command.split('\n')[0] ?? '';
+		const cmd = firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine;
+		lines.push(`    ${num} exec: ${cmd}`);
 	});
 	return lines;
 }

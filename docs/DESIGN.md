@@ -40,9 +40,9 @@ Tᵢ  : 变换（transition），接收输入，改变状态，产生输出
 Tᵢ: (S, Iᵢ) → (S', Oᵢ)
 
 S   : 变换前的系统状态（docker image tag）
-Iᵢ  : 输入（CLI 命令 / HTTP request）
+Iᵢ  : 输入（CLI 命令）
 S'  : 变换后的系统状态（新的 docker image tag）
-Oᵢ  : 输出（stdout, stderr, exit_code / HTTP response）
+Oᵢ  : 输出（stdout, stderr, exit_code）
 ```
 
 ### 2.2 状态的隐晦性
@@ -93,15 +93,7 @@ type PostCondition = {
   steps: Step[];
 }
 
-type Step = HttpStep | ExecStep
-
-type HttpStep = {
-  type: 'http';
-  request: HttpRequest;
-  timeout?: string;            // 如 "30s", "2m"
-  assert?: Assertion;
-  wait?: WaitConfig;
-}
+type Step = ExecStep
 
 type ExecStep = {
   type: 'exec';
@@ -158,9 +150,9 @@ TestCase 的 `steps` 和 PostCondition 的 `steps` **结构完全对称**——
 | `assert` | 否 | 断言，省略则为 transition step（exit_code=0 = PASS） |
 | `wait` | 否 | 等待条件，轮询重试直到 PASS 或 timeout |
 
-**HttpStep**：HTTP step 在容器内部执行（通过 `node -e fetch(...)`），而非从 treespec 进程外部发起。
-这意味着 HTTP step 和 exec step 在同一网络命名空间，可直接访问容器内启动的服务（如 `localhost:9876`），
-无需 `network: host`。
+所有 step 都在容器内执行。需要 HTTP 测试时，用 `curl` 在 exec step 中发请求。
+容器内启动的服务可直接通过 `localhost:port` 访问，无需 `network: host`。
+Shell 变量天然支持多请求间的返回值传递。
 
 ### 3.3 后置条件容器
 
@@ -384,7 +376,7 @@ execute(node, parent_tag):
 
   # 步骤 3: 在容器内按顺序执行 steps
   for step in node.steps:
-    output = exec_or_http(container, step, step.timeout)
+    output = exec(container, step, step.timeout)
     if step.assert && !evaluate(step.assert, output):
       report FAIL
       docker rm container
@@ -401,7 +393,7 @@ execute(node, parent_tag):
     postcon_container = docker run new_tag
     for postcon in node.postcon:
       for step in postcon.steps:
-        output = exec_or_http(postcon_container, step, step.timeout)
+        output = exec(postcon_container, step, step.timeout)
         if step.assert && !evaluate(step.assert, output):
           report FAIL (postcon: postcon.name)
           docker rm postcon_container
@@ -625,18 +617,12 @@ postcon:
 
 ### 8.2 环境变量
 
-Step 的 command 和 HTTP request 中可以引用环境变量，
+Step 的 command 中可以引用环境变量，
 用于隔绝 token、密钥等敏感信息：
 
 ```yaml
-- type: exec
-  command: "myapp provider add openrouter --api-key $OPENROUTER_API_KEY"
-- type: http
-  request:
-    method: POST
-    url: "https://api.example.com/auth"
-    headers:
-      Authorization: "Bearer $API_TOKEN"
+- command: "myapp provider add openrouter --api-key $OPENROUTER_API_KEY"
+- command: "curl -s -H \"Authorization: Bearer $API_TOKEN\" https://api.example.com/auth"
 ```
 
 环境变量来源优先级：
@@ -656,10 +642,8 @@ Step 的 command 和 HTTP request 中可以引用环境变量，
 **regex** 的 `path` 支持：
 - `stdout` / `stderr` — 命令输出
 - `exit_code` — 退出码（有 assert 时隐式检查 =0，无需显式写）
-- `status` — HTTP 响应状态码
-- `body` — HTTP 响应体
 
-**隐式 exit_code 检查**：exec step 有 `assert` 时，除了检查 assert 条件，还会隐式检查 `exit_code=0`。
+**隐式 exit_code 检查**：step 有 `assert` 时，除了检查 assert 条件，还会隐式检查 `exit_code=0`。
 省略 `assert` 的 transition step 同样隐式检查 `exit_code=0`。
 
 ### 8.4 LLM Assertion
