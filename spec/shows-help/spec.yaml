@@ -14,4 +14,4 @@ steps:
         - { path: "stdout", regex: "treespec init" }
         - { path: "stdout", regex: "treespec clean" }
         - { path: "stdout", regex: "For details" }
-        - { path: "stdout", regex: "run --help" }
+        - { path: "stdout", regex: "treespec docs" }
