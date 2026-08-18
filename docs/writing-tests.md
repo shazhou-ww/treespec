@@ -353,7 +353,7 @@ which may not match the container's libc.
 **Best for:** Pure JS/TS projects, or projects whose dependencies are all
 pure JS.
 
-#### Build Mode
+#### Build Mode (Dockerfile Build)
 
 The Dockerfile is complete — COPY + install + build all inside the container.
 Everything is compiled in the correct environment. Use a **different WORKDIR**
@@ -383,19 +383,89 @@ Run with `--rebuild` to force image rebuild when dependencies change.
 
 **Pros:** Full compatibility — native modules compiled for the correct
 libc/arch.
-**Cons:** Slower — every dependency change requires `--rebuild`.
-**Best for:** Projects with native Node modules, or when host and container
-have different libc.
+**Cons:** Slow iteration — every source change requires `--rebuild`, which
+rebuilds the entire image from scratch. The Dockerfile `COPY . .` copies from
+the build context (host project dir), which introduces host-path dependency.
+**Best for:** Rarely-changed projects, or one-off builds where iteration speed
+is not a concern.
+
+#### Build Mode (Runtime Build) — recommended
+
+Instead of baking source + build into the Dockerfile, keep the Dockerfile
+minimal (system deps + toolchain only) and move install + build into the
+**root node's steps**. Source code is read from the `/app:ro` mount (a
+fixed, deterministic path), avoiding host pwd drift.
+
+**Dockerfile** — system deps + toolchain only, rarely needs rebuild:
+
+```dockerfile
+FROM node:22-alpine
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /opt/project
+ENV PATH="/opt/project/node_modules/.bin:$PATH"
+```
+
+**Root node** — copy source from `/app` mount + install + build:
+
+```yaml
+# spec/bootstrap/spec.yaml
+steps:
+  - name: install-deps
+    command: cp /app/package.json /app/pnpm-lock.yaml /opt/project/ && pnpm install --frozen-lockfile
+  - name: build
+    command: cp -a /app/src /app/tsconfig.json /opt/project/ && pnpm build
+```
+
+After steps pass, `docker commit` captures the full build → base image S₀.
+
+**Why this is better than Dockerfile Build:**
+
+1. **Image is stable** — Dockerfile only has system deps, so the image tag
+   rarely changes. No `--rebuild` needed when source or deps change.
+2. **Source from fixed path** — `/app:ro` is always the project root, mounted
+   by treespec. No reliance on build context or host pwd.
+3. **Fast iteration** — source changes only re-run the root node's steps
+   (copy + build), not a full Docker image rebuild.
+
+**Advanced: deps caching via commit chain**
+
+Split install and build into parent-child nodes. When only source changes,
+the deps node's committed image is reused (image tag exists → skip), and only
+the build node re-runs:
+
+```yaml
+# spec/deps/spec.yaml — install deps only, cached when lockfile unchanged
+steps:
+  - name: install
+    command: cp /app/package.json /app/pnpm-lock.yaml /opt/project/ && pnpm install --frozen-lockfile
+```
+
+```yaml
+# spec/deps/build/spec.yaml — child of deps, copy source + build
+steps:
+  - name: build
+    command: cp -a /app/src /app/tsconfig.json /opt/project/ && pnpm build
+```
+
+When `pnpm-lock.yaml` changes → both nodes re-run (correct behavior).
+When only source changes → only `deps/build` re-runs (fast, deps already
+in parent's committed image).
 
 #### Comparison
 
-| | Mount Mode | Build Mode |
-|---|---|---|
-| Dockerfile | Minimal (system deps only) | Complete (COPY + install + build) |
-| Source / node_modules | From host (bind mount `/app:ro`) | Baked into image (at `/opt/project`) |
-| Iteration speed | Fast (no rebuild) | Slower (`--rebuild` needed) |
-| Native module compat | Host-dependent | Container-native ✓ |
-| WORKDIR | `/app` (matches mount) | `/opt/project` (avoids mount overlay) |
+| | Mount Mode | Dockerfile Build | Runtime Build |
+|---|---|---|---|
+| Dockerfile | Minimal (system deps) | Complete (COPY + install + build) | Minimal (system deps) |
+| Source | Host bind mount `/app:ro` | Baked into image (COPY from context) | `/app:ro` mount (fixed path) |
+| Install + build | On host | In Dockerfile (image build time) | In root node steps (runtime) |
+| Image rebuild trigger | Never | Source or deps change | System deps change only |
+| Iteration speed | Fastest | Slowest | Fast (re-run root steps) |
+| Native module compat | Host-dependent ✓* | Container-native ✓ | Container-native ✓ |
+| WORKDIR | `/app` (matches mount) | `/opt/project` | `/opt/project` |
+
+\* Only when host and container share the same libc.
 
 #### Build Context Exclusions
 
@@ -405,17 +475,21 @@ have different libc.
 .git  node_modules  dist  .treespec-output
 ```
 
-In build mode, you must run `npm install` and `tsc --build` **inside** the
-Dockerfile — don't rely on host-compiled `dist/` or `node_modules/` being
-available during image build.
+In Dockerfile Build mode, you must run `npm install` and `tsc --build`
+**inside** the Dockerfile — don't rely on host-compiled `dist/` or
+`node_modules/` being available during image build.
+
+In Runtime Build mode, this is not a concern — install and build happen in
+container steps from the `/app` mount, not during `docker build`.
 
 #### Choosing
 
 ```
 Pure JS project?                        → Mount mode (default)
-Native modules (better-sqlite3, sharp)? → Build mode
+Native modules (better-sqlite3, sharp)? → Runtime Build mode
 Host and container same libc?           → Mount mode works
-Host glibc, container Alpine (musl)?    → Build mode required
+Host glibc, container Alpine (musl)?    → Runtime Build mode
+Need fast iteration + container-native? → Runtime Build mode (recommended)
 ```
 
 ## 8. Docker Commit Chain (State Isolation Model)

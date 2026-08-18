@@ -1,7 +1,7 @@
 {
   "name": "treespec",
-  "version": "0.4.1",
-  "description": "Tree-structured, stateful test system \u2014 state isolation via Docker commit chains, DFS traversal with failure pruning.",
+  "version": "0.4.0",
+  "description": "Tree-structured, stateful test system — state isolation via Docker commit chains, DFS traversal with failure pruning.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
