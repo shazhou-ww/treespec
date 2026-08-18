@@ -1,6 +1,5 @@
 description: "parent writes greet state"
 steps:
-  - type: exec
-    description: "init and set name for child to inherit"
+  - description: "init and set name for child to inherit"
     command: "greet init && greet config set name Parent"
 primary: child

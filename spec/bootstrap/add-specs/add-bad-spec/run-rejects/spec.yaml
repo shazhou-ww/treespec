@@ -1,7 +1,6 @@
 description: "run should reject broken spec before executing any tests"
 steps:
-  - type: exec
-    description: "treespec run fails on broken spec (scan rejects before execution)"
+  - description: "treespec run fails on broken spec (scan rejects before execution)"
     command: "treespec run --config /workspace/greeting/treespec.yaml --no-trace --rebuild 2>&1; [ $? -ne 0 ]"
     assert:
       type: regex

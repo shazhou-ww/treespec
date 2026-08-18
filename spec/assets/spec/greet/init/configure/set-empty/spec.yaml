@@ -1,12 +1,10 @@
 description: "set empty name, greet fails"
 steps:
-  - type: exec
-    description: "set name to empty string"
+  - description: "set name to empty string"
     command: "greet config set name ''"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "name=" }
-  - type: exec
-    description: "greet without name — should fail"
+  - description: "greet without name — should fail"
     command: "greet"

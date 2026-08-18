@@ -1,7 +1,6 @@
 description: "show full spec forest"
 steps:
-  - type: exec
-    description: "show tree"
+  - description: "show tree"
     command: "treespec tree --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex

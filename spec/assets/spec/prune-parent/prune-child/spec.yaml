@@ -1,7 +1,6 @@
 description: "should be skipped when parent fails"
 steps:
-  - type: exec
-    description: "should not run (pruned by parent failure)"
+  - description: "should not run (pruned by parent failure)"
     command: "echo should-not-run"
     assert:
       type: regex

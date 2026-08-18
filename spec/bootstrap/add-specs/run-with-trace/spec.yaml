@@ -1,7 +1,6 @@
 description: "run with trace enabled, then show it"
 steps:
-  - type: exec
-    description: "run with trace output"
+  - description: "run with trace output"
     timeout: "5m"
     command: |
       rm -rf /workspace/greeting-trace &&
@@ -11,8 +10,7 @@ steps:
       conditions:
         - { path: "stdout", regex: "Trace" }
         - { path: "stdout", regex: "greeting-trace" }
-  - type: exec
-    description: "verify trace file and show"
+  - description: "verify trace file and show"
     command: |
       test -f /workspace/greeting-trace/trace.jsonl &&
       treespec show /workspace/greeting-trace/trace.jsonl 2>&1

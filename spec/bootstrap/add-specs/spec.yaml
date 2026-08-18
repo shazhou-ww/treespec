@@ -1,7 +1,6 @@
 description: "copy all good spec trees into project at once"
 steps:
-  - type: exec
-    description: "copy greet, write-state, llm-assert, prune-parent, wait-poll, primary-demo"
+  - description: "copy greet, write-state, llm-assert, prune-parent, wait-poll, primary-demo"
     command: |
       cp -r /app/spec/assets/spec/greet /workspace/greeting/spec/ &&
       cp -r /app/spec/assets/spec/write-state /workspace/greeting/spec/ &&

@@ -1,7 +1,6 @@
 description: "broken spec with invalid assert"
 steps:
-  - type: exec
-    description: "run broken spec (should fail validation)"
+  - description: "run broken spec (should fail validation)"
     command: "echo hi"
     assert:
       type: nonexistent

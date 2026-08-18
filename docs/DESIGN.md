@@ -96,7 +96,6 @@ type PostCondition = {
 type Step = ExecStep
 
 type ExecStep = {
-  type: 'exec';
   command: string;
   timeout?: string;            // 如 "30s", "2m"
   assert?: Assertion;
@@ -573,22 +572,19 @@ description: "添加 openrouter provider"
 env:
   - OPENROUTER_API_KEY
 steps:
-  - type: exec
-    command: "myapp provider add openrouter --api-key $OPENROUTER_API_KEY"
+  - command: "myapp provider add openrouter --api-key $OPENROUTER_API_KEY"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "provider 'openrouter' added" }
-  - type: exec
-    command: "myapp provider list"
+  - command: "myapp provider list"
     assert:
       type: jsonata
       expression: "$count(providers[name='openrouter']) = 1"
 postcon:
   - name: verify-provider-persisted
     steps:
-      - type: exec
-        command: "cat /data/providers.json"
+      - command: "cat /data/providers.json"
         assert:
           type: jsonata
           expression: "providers[0].name = 'openrouter'"
@@ -600,15 +596,13 @@ description: "添加 claude-4-sonnet model"
 env:
   - OPENROUTER_API_KEY
 steps:
-  - type: exec
-    command: "myapp model add claude-4-sonnet --provider openrouter"
+  - command: "myapp model add claude-4-sonnet --provider openrouter"
     # exec step with assert 隐式检查 exit_code=0
     # 省略 exit_code 条件即可
 postcon:
   - name: verify-model-listed
     steps:
-      - type: exec
-        command: "myapp model list"
+      - command: "myapp model list"
         assert:
           type: regex
           conditions:

@@ -1,7 +1,6 @@
 description: "greet reads state — expect Hello, Alice!"
 steps:
-  - type: exec
-    description: "greet reads persisted state"
+  - description: "greet reads persisted state"
     command: "greet"
     assert:
       type: regex

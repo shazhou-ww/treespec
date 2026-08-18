@@ -25,7 +25,7 @@ REASON: <one sentence explanation of what went wrong>
 Be strict but fair. Only PASS when the output clearly meets the criteria.`;
 
 function formatStepCommand(step: Step): string {
-	return `exec: ${step.command}`;
+	return step.command;
 }
 
 function formatStepOutput(result: StepResult): string {

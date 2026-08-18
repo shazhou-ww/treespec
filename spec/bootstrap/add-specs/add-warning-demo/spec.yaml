@@ -1,6 +1,5 @@
 description: "add warning-demo — orphan child should produce validation warning"
 steps:
-  - type: exec
-    description: "copy warning-demo into project"
+  - description: "copy warning-demo into project"
     command: "cp -r /app/spec/assets/spec/warning-demo /workspace/greeting/spec/"
 primary: validate-warns

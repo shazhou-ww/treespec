@@ -62,8 +62,7 @@ treespec run
 ```yaml
 description: "initialize a git repository"
 steps:
-  - type: exec
-    command: "git init"
+  - command: "git init"
     assert:
       type: regex
       conditions:
@@ -71,8 +70,7 @@ steps:
 postcon:
   - name: has-git-dir
     steps:
-      - type: exec
-        command: "test -d .git"
+      - command: "test -d .git"
 ```
 
 项目骨架（完整主线 / 分叉见上一节的树）：

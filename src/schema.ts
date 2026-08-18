@@ -48,10 +48,9 @@ const WaitConfigSchema = z.object({
 	delay: z.string().min(1).optional(),
 });
 
-// ─── Step (default type = 'exec') ───────────────────────────────
+// ─── Step ───────────────────────────────────────────────────────
 
 const ExecStepSchema = z.object({
-	type: z.literal('exec'),
 	command: z.string().min(1),
 	cwd: z.string().min(1).optional(),
 	description: z.string().optional(),
@@ -60,12 +59,7 @@ const ExecStepSchema = z.object({
 	wait: WaitConfigSchema.optional(),
 });
 
-const StepSchema = z.preprocess((val) => {
-	if (val !== null && typeof val === 'object' && !Array.isArray(val) && !('type' in val)) {
-		return { ...val, type: 'exec' };
-	}
-	return val;
-}, ExecStepSchema);
+const StepSchema = ExecStepSchema;
 
 // ─── PostCondition / Spec ────────────────────────────────────────
 

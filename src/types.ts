@@ -67,7 +67,6 @@ export interface WaitConfig {
 // ─── Step Type ──────────────────────────────────────────────────
 
 export interface ExecStep {
-	type: 'exec';
 	/** Shell command to execute inside the container. Supports $ENV_VAR substitution. */
 	command: string;
 	/** Working directory inside the container. Default: container's WorkingDir. */

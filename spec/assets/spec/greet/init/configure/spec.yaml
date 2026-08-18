@@ -1,7 +1,6 @@
 description: "greet config set name Alice — update state"
 steps:
-  - type: exec
-    description: "set name to Alice"
+  - description: "set name to Alice"
     command: "greet config set name Alice"
     assert:
       type: regex

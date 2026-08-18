@@ -106,8 +106,7 @@ description: "what this test verifies"   # optional but recommended
 env:                                       # optional, required env vars
   - API_KEY                                #   missing → SKIP this node + children
 steps:                                     # required
-  - type: exec                             #   exec (default, can be omitted)
-    command: "some command"                #   required for exec
+  - command: "some command"                #   shell command inside container
     cwd: "/workspace"                      #   optional, working dir inside container
     description: "do something"            #   optional, human-readable
     timeout: "30s"                         #   optional, per-step
@@ -126,8 +125,7 @@ Minimal example:
 ```yaml
 description: "echo hello"
 steps:
-  - type: exec
-    command: "echo hello"
+  - command: "echo hello"
     assert:
       type: regex
       conditions:
@@ -136,11 +134,10 @@ steps:
 
 ## 3. Step Types
 
-### type: exec — Run a shell command inside the container
+### Steps — Run shell commands inside the container
 
 ```yaml
-- type: exec
-  command: "echo hello"
+- command: "echo hello"
   timeout: "10s"
   assert: { type: regex, ... }
 ```
@@ -235,10 +232,8 @@ Just cd/mkdir/setup?              → omit assert
 
 ```yaml
 steps:
-  - type: exec
-    command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
-  - type: exec
-    command: "cat /tmp/ready"
+  - command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
+  - command: "cat /tmp/ready"
     wait:
       timeout: "30s"     # total time to keep retrying
       delay: "2s"         # gap AFTER each attempt before re-running
@@ -257,8 +252,7 @@ Step re-executes until assert passes or timeout. Only PASS/FAIL (no RETRY).
 postcon:
   - name: verify-state-committed
     steps:
-      - type: exec
-        command: "cat /tmp/state"
+      - command: "cat /tmp/state"
         assert: { type: regex, ... }
 ```
 

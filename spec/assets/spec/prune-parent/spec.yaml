@@ -1,6 +1,5 @@
 description: "intentional failure"
 steps:
-  - type: exec
-    description: "fail — should prune children"
+  - description: "fail — should prune children"
     command: "exit 1"
 primary: prune-child
