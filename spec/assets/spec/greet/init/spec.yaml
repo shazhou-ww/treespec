@@ -1,7 +1,6 @@
 description: "greet init — create state file"
 steps:
-  - type: exec
-    description: "initialize greet state file"
+  - description: "initialize greet state file"
     command: "greet init"
     assert:
       type: regex

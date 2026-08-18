@@ -1,7 +1,6 @@
 description: "show lineage of the primary path"
 steps:
-  - type: exec
-    description: "show full lineage"
+  - description: "show full lineage"
     command: "treespec lineage --config /app/treespec.yaml 2>&1"
     assert:
       type: regex
@@ -9,16 +8,14 @@ steps:
         - { path: "stdout", regex: "bootstrap" }
         - { path: "stdout", regex: "add-specs" }
         - { path: "stdout", regex: "validate" }
-  - type: exec
-    description: "show ancestors only"
+  - description: "show ancestors only"
     command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-ancestors 2>&1"
     assert:
       type: regex
       conditions:
         - { path: "stdout", regex: "← here" }
         - { path: "stdout", regex: "bootstrap" }
-  - type: exec
-    description: "show descendants only"
+  - description: "show descendants only"
     command: "treespec lineage bootstrap/add-specs --config /app/treespec.yaml --only-descends 2>&1"
     assert:
       type: regex

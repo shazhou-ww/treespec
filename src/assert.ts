@@ -9,7 +9,7 @@ import {
 	callLlmApi,
 	parseJudgeResponse,
 } from './llm.js';
-import { isHttpStepResult, type StepResult } from './steps.js';
+import type { StepResult } from './steps.js';
 import type { Assertion, Spec, Step } from './types.js';
 
 export interface JudgeResult {
@@ -53,55 +53,33 @@ function normalizeResult(result: StepResult | Record<string, unknown>): Record<s
 	if ('exitCode' in raw && !('exit_code' in raw)) {
 		raw.exit_code = raw.exitCode;
 	}
-	// Normalize header lookup: headers.Foo → headers.foo
-	if (
-		raw.headers !== null &&
-		typeof raw.headers === 'object' &&
-		!Array.isArray(raw.headers)
-	) {
-		const normalized: Record<string, string> = {};
-		for (const [key, value] of Object.entries(raw.headers as Record<string, unknown>)) {
-			normalized[key.toLowerCase()] = String(value);
-		}
-		raw.headers = normalized;
-	}
 	return raw;
 }
 
 /**
  * Build the object JSONata evaluates against.
- * If stdout/body is a JSON object, its fields are merged so expressions like `a = 1` work.
+ * If stdout is a JSON object, its fields are merged so expressions like `a = 1` work.
  */
 function jsonataInput(data: Record<string, unknown>): Record<string, unknown> {
-	let result = data;
-
-	for (const field of ['stdout', 'body'] as const) {
-		const value = result[field];
-		if (typeof value !== 'string') continue;
-		const trimmed = value.trim();
-		if (!trimmed) continue;
-		try {
-			const parsed: unknown = JSON.parse(trimmed);
-			if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-				result = { ...(parsed as Record<string, unknown>), ...result };
-			}
-		} catch {
-			// field is not JSON — keep raw result object
+	const result = data;
+	const value = result.stdout;
+	if (typeof value !== 'string') return result;
+	const trimmed = value.trim();
+	if (!trimmed) return result;
+	try {
+		const parsed: unknown = JSON.parse(trimmed);
+		if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+			return { ...(parsed as Record<string, unknown>), ...result };
 		}
+	} catch {
+		// stdout is not JSON — keep raw result object
 	}
-
 	return result;
-}
-
-function isHttpLike(data: Record<string, unknown>): boolean {
-	return 'status' in data && !('exit_code' in data);
 }
 
 /**
  * Evaluate an assertion against a step result object.
- * If `assertion` is undefined:
- *   - exec transition: exit_code 0 = PASS
- *   - http transition: HTTP 2xx = PASS
+ * If `assertion` is undefined: transition step — exit_code 0 = PASS.
  * For exec steps with a defined assertion (not 'exit_code' type),
  * exit_code 0 is implicitly required — non-zero exit fails immediately
  * before evaluating regex/jsonata/llm conditions.
@@ -113,16 +91,8 @@ export async function evaluateAssertion(
 	ctx?: AssertContext,
 ): Promise<JudgeResult> {
 	const data = normalizeResult(result);
-	const httpLike = isHttpStepResult(result as StepResult) || isHttpLike(data);
 
 	if (assertion === undefined) {
-		if (httpLike) {
-			const status = Number(data.status ?? 0);
-			if (status >= 200 && status < 300) {
-				return { verdict: 'PASS', reason: `transition step: HTTP ${status}` };
-			}
-			return { verdict: 'FAIL', reason: `transition step: HTTP ${status}` };
-		}
 		const code = Number(data.exit_code ?? 1);
 		if (code === 0) {
 			return { verdict: 'PASS', reason: 'transition step: exit code 0' };
@@ -130,8 +100,8 @@ export async function evaluateAssertion(
 		return { verdict: 'FAIL', reason: `transition step: exit code ${code}` };
 	}
 
-	// Implicit exit_code=0 check for exec steps (not http, not exit_code assertion)
-	if (!httpLike && assertion.type !== 'exit_code') {
+	// Implicit exit_code=0 check for steps with non-exit_code assertions
+	if (assertion.type !== 'exit_code') {
 		const code = Number(data.exit_code ?? 0);
 		if (code !== 0) {
 			return { verdict: 'FAIL', reason: `exit code ${code}` };
@@ -169,13 +139,7 @@ export async function evaluateAssertion(
 	if (assertion.type === 'regex') {
 		const failures: string[] = [];
 		for (const condition of assertion.conditions) {
-			let path = condition.path;
-			// headers.<Name> — match case-insensitively via normalized headers
-			if (path.toLowerCase().startsWith('headers.')) {
-				const name = path.slice('headers.'.length).toLowerCase();
-				path = `headers.${name}`;
-			}
-			const value = resolvePath(data, path);
+			const value = resolvePath(data, condition.path);
 			const text = toMatchString(value);
 			let re: RegExp;
 			try {

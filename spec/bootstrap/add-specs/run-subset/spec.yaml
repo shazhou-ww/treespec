@@ -1,7 +1,6 @@
 description: "run a single spec by path"
 steps:
-  - type: exec
-    description: "run single spec — greet/init/configure/verify"
+  - description: "run single spec — greet/init/configure/verify"
     command: "treespec run --config /workspace/greeting/treespec.yaml greet/init/configure/verify --no-trace 2>&1"
     assert:
       type: regex

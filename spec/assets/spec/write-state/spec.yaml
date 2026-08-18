@@ -1,16 +1,13 @@
 description: "greet init + config set — write state for children to inherit"
 steps:
-  - type: exec
-    description: "initialize greet state file"
+  - description: "initialize greet state file"
     command: "greet init"
-  - type: exec
-    description: "set name to Alice"
+  - description: "set name to Alice"
     command: "greet config set name Alice"
 postcon:
   - name: verify-state-committed
     steps:
-      - type: exec
-        description: "greet config get should return committed value"
+      - description: "greet config get should return committed value"
         command: "greet config get name"
         assert:
           type: regex

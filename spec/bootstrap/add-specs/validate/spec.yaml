@@ -1,7 +1,6 @@
 description: "validate project with all specs"
 steps:
-  - type: exec
-    description: "validate all specs"
+  - description: "validate all specs"
     command: "treespec validate --config /workspace/greeting/treespec.yaml 2>&1"
     assert:
       type: regex

@@ -1,5 +1,4 @@
 description: "has an undeclared child"
 steps:
-  - type: exec
-    command: "echo parent"
+  - command: "echo parent"
 primary: declared-child

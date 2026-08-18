@@ -1,7 +1,6 @@
 description: "branch b"
 steps:
-  - type: exec
-    description: "echo branch-b"
+  - description: "echo branch-b"
     command: "echo branch-b"
     assert:
       type: regex

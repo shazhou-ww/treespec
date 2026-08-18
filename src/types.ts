@@ -11,7 +11,6 @@ export interface RegexCondition {
 	/**
 	 * Path to the value to match against.
 	 * exec:  'stdout' | 'stderr' | 'exit_code'
-	 * http:  'status' | 'body' | 'headers.<name>'
 	 */
 	path: string;
 	/** Regex pattern. Match = PASS. */
@@ -28,8 +27,7 @@ export interface JsonataAssertion {
 	type: 'jsonata';
 	/**
 	 * JSONata expression evaluated against the step's result object.
-	 * exec input:  { stdout, stderr, exit_code }
-	 * http input:  { status, statusText, headers, body, duration_ms }
+	 * exec input: { stdout, stderr, exit_code }
 	 * Truthy = PASS.
 	 */
 	expression: string;
@@ -49,19 +47,6 @@ export interface LlmAssertion {
 
 export type Assertion = RegexAssertion | JsonataAssertion | ExitCodeAssertion | LlmAssertion;
 
-// ─── HTTP Request ────────────────────────────────────────────────
-
-export interface HttpRequest {
-	/** HTTP method (GET, POST, PUT, PATCH, DELETE, etc.) */
-	method: string;
-	/** Request URL. Supports $ENV_VAR substitution. */
-	url: string;
-	/** Request headers. Values support $ENV_VAR substitution. */
-	headers?: Record<string, string>;
-	/** Arbitrary JSON body, serialized automatically. Supports $ENV_VAR in string values. */
-	body?: unknown;
-}
-
 // ─── Wait Config ────────────────────────────────────────────────
 
 export interface WaitConfig {
@@ -79,10 +64,9 @@ export interface WaitConfig {
 	delay?: string;
 }
 
-// ─── Step Types (discriminated union) ────────────────────────────
+// ─── Step Type ──────────────────────────────────────────────────
 
 export interface ExecStep {
-	type: 'exec';
 	/** Shell command to execute inside the container. Supports $ENV_VAR substitution. */
 	command: string;
 	/** Working directory inside the container. Default: container's WorkingDir. */
@@ -102,20 +86,7 @@ export interface ExecStep {
 	wait?: WaitConfig;
 }
 
-export interface HttpStep {
-	type: 'http';
-	request: HttpRequest;
-	/** Human-readable description shown in output. Falls back to METHOD URL if omitted. */
-	description?: string;
-	/** Duration string: "30s", "2m". Default: "30s". */
-	timeout?: string;
-	/** Assertion on response. Omit = transition step (HTTP 2xx = PASS). */
-	assert?: Assertion;
-	/** Wait for a precondition. See ExecStep.wait. */
-	wait?: WaitConfig;
-}
-
-export type Step = ExecStep | HttpStep;
+export type Step = ExecStep;
 
 // ─── PostCondition ──────────────────────────────────────────────
 

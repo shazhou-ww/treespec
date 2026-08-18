@@ -1,7 +1,6 @@
 description: "run all specs — expect failures (prune-parent, set-empty) and skips"
 steps:
-  - type: exec
-    description: "run all specs"
+  - description: "run all specs"
     timeout: "5m"
     command: "treespec run --config /workspace/greeting/treespec.yaml --no-trace --rebuild 2>&1; true"
     assert:

@@ -1,14 +1,10 @@
 description: "greet serve — HTTP returns greeting from state"
 steps:
-  - type: exec
-    description: "start greet HTTP server on 9876"
+  - description: "start greet HTTP server on 9876"
     command: "greet serve --port 9876 & sleep 0.5"
-  - type: http
-    description: "GET / returns greeting from state"
-    request:
-      method: GET
-      url: "http://localhost:9876/"
+  - description: "GET / returns greeting from state"
+    command: "curl -s -o /dev/null -w '%{http_code}' http://localhost:9876/"
     assert:
       type: regex
       conditions:
-        - { path: "status", regex: "^200$" }
+        - { path: stdout, regex: "^200$" }

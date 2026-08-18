@@ -1,7 +1,6 @@
 description: "shows help with commands and cross-references when called with no args"
 steps:
-  - type: exec
-    description: "run treespec with no args — expect help"
+  - description: "run treespec with no args — expect help"
     command: "treespec 2>&1 || true"
     assert:
       type: regex
@@ -13,5 +12,5 @@ steps:
         - { path: "stdout", regex: "treespec lineage" }
         - { path: "stdout", regex: "treespec init" }
         - { path: "stdout", regex: "treespec clean" }
-        - { path: "stdout", regex: "For details" }
-        - { path: "stdout", regex: "run --help" }
+        - { path: "stdout", regex: "For detailed" }
+        - { path: "stdout", regex: "treespec docs" }

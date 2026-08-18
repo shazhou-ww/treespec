@@ -1,7 +1,6 @@
 description: "branches without primary"
 steps:
-  - type: exec
-    description: "echo (container node, no primary)"
+  - description: "echo (container node, no primary)"
     command: "echo no-primary"
 branches:
   - child-a

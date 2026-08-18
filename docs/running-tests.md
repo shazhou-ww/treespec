@@ -61,7 +61,7 @@ spec: spec                      # relative to projectDir, scanned for spec.yaml
 
 - Default: bridge (Docker default).
 - Set `docker.network: host` if specs need host networking.
-- HTTP steps run inside the container via `node -e fetch` — they can access
+- All steps run inside the container — `curl` can access
   container-local services (`localhost:PORT`) regardless of network mode.
 
 ## 4. Running the Tree

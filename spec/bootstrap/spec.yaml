@@ -1,14 +1,11 @@
 description: "init a treespec project and install SUT (greet CLI)"
 steps:
-  - type: exec
-    description: "copy SUT (greet CLI) into project root"
+  - description: "copy SUT (greet CLI) into project root"
     command: "rm -rf /workspace/greeting && mkdir -p /workspace/greeting && cp -r /app/spec/assets/sut/. /workspace/greeting/"
-  - type: exec
-    description: "link greet to bin/ (PATH entry)"
+  - description: "link greet to bin/ (PATH entry)"
     cwd: /workspace/greeting
     command: "chmod +x src/index.js && mkdir -p bin && ln -sf ../src/index.js bin/greet"
-  - type: exec
-    description: "init treespec in existing project"
+  - description: "init treespec in existing project"
     command: "treespec init /workspace/greeting --name greeting 2>&1"
     assert:
       type: regex
@@ -18,8 +15,7 @@ steps:
 postcon:
   - name: verify-setup
     steps:
-      - type: exec
-        description: "verify project setup in committed state"
+      - description: "verify project setup in committed state"
         cwd: /workspace/greeting
         command: |
           test -f treespec.yaml &&

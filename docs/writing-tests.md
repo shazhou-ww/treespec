@@ -35,7 +35,7 @@ tree of Docker containers, where each node is both a **state** and the
   Child nodes start from the parent's committed image — they inherit the
   parent's filesystem state.
 - **Edge = steps + assertions.** Each `spec.yaml` declares steps (shell
-  commands or HTTP requests) to execute inside the container, and assertions
+  commands) to execute inside the container, and assertions
   to verify the result. Steps mutate the container's state; assertions check
   it. If all assertions pass, the container is `docker commit`-ed into a new
   image tag that child nodes will start from.
@@ -106,8 +106,7 @@ description: "what this test verifies"   # optional but recommended
 env:                                       # optional, required env vars
   - API_KEY                                #   missing → SKIP this node + children
 steps:                                     # required
-  - type: exec                             #   exec | http
-    command: "some command"                #   required for exec
+  - command: "some command"                #   shell command inside container
     cwd: "/workspace"                      #   optional, working dir inside container
     description: "do something"            #   optional, human-readable
     timeout: "30s"                         #   optional, per-step
@@ -126,8 +125,7 @@ Minimal example:
 ```yaml
 description: "echo hello"
 steps:
-  - type: exec
-    command: "echo hello"
+  - command: "echo hello"
     assert:
       type: regex
       conditions:
@@ -136,35 +134,35 @@ steps:
 
 ## 3. Step Types
 
-### type: exec — Run a shell command inside the container
+### Steps — Run shell commands inside the container
 
 ```yaml
-- type: exec
-  command: "echo hello"
+- command: "echo hello"
   timeout: "10s"
   assert: { type: regex, ... }
 ```
 
-### type: http — Send an HTTP request from inside the container
+### HTTP testing with curl
 
-Uses `node -e fetch` internally. URL can be `localhost:PORT` to access services
-started in the same container. No `network: host` needed — http and exec share
-the same network namespace.
+Use `curl` within exec steps to test HTTP services. Shell variables enable
+inter-request value passing — something previously impossible with the removed
+`type: http` step. Services started in the same container are reachable via
+`localhost:PORT`.
 
 ```yaml
-- type: http
-  request:
-    method: POST
-    url: "https://api.example.com/endpoint"
-    headers:
-      Content-Type: "application/json"
-      Authorization: "Bearer $API_TOKEN"
-    body:
-      key: "value"
-  assert: { type: jsonata, ... }
-```
+# Multi-request flow: login → use token
+- command: |
+    TOKEN=$(curl -s -X POST http://localhost:3000/login \
+      -H "Content-Type: application/json" \
+      -d '{"user":"admin","pass":"123"}' | jq -r '.token')
+    curl -s http://localhost:3000/profile \
+      -H "Authorization: Bearer $TOKEN"
+  assert: { type: jsonata, expression: '$.role = "admin"' }
 
-HTTP steps support `$VAR` and `${VAR}` env substitution in url, headers, body.
+# Status code check
+- command: "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/health"
+  assert: { type: regex, conditions: [{ path: stdout, regex: "^200$" }] }
+```
 
 ## 4. Assertion Types
 
@@ -178,9 +176,9 @@ assert:
     # exit_code=0 is checked implicitly — no need to add it explicitly
 ```
 
-Paths: `stdout` | `stderr` | `exit_code` (exec) | `status` | `body` | `headers.*` (http)
+Paths: `stdout` | `stderr` | `exit_code`
 All conditions must match → PASS. Any miss → FAIL.
-Note: exec steps with assert also implicitly check exit_code=0.
+Note: steps with assert also implicitly check exit_code=0.
 
 ### type: jsonata — JSONata expression evaluated against a context object
 
@@ -234,10 +232,8 @@ Just cd/mkdir/setup?              → omit assert
 
 ```yaml
 steps:
-  - type: exec
-    command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
-  - type: exec
-    command: "cat /tmp/ready"
+  - command: "rm -f /tmp/ready; (sleep 3 && echo ready > /tmp/ready) &"
+  - command: "cat /tmp/ready"
     wait:
       timeout: "30s"     # total time to keep retrying
       delay: "2s"         # gap AFTER each attempt before re-running
@@ -256,8 +252,7 @@ Step re-executes until assert passes or timeout. Only PASS/FAIL (no RETRY).
 postcon:
   - name: verify-state-committed
     steps:
-      - type: exec
-        command: "cat /tmp/state"
+      - command: "cat /tmp/state"
         assert: { type: regex, ... }
 ```
 
@@ -315,8 +310,8 @@ Key properties:
   injected into the container. The `env` field in spec.yaml declares
   required vars (missing → SKIP this node).
 - **Network** — default: bridge. Set `docker.network: host` in
-  treespec.yaml for host networking. HTTP steps run inside the container
-  via `node -e fetch`, so they can access container-local services
+  treespec.yaml for host networking. All steps run inside the container,
+  so `curl` can access container-local services
   (`localhost:PORT`) regardless of network mode.
 - **Privileged mode** — containers run privileged, required for DinD
   (Docker-in-Docker). Each container runs its own `dockerd`; no host
@@ -584,11 +579,10 @@ bootstrap/
 
 ## Pitfalls
 
-1. HTTP steps execute inside the container (via `node -e fetch`). They CAN
-   access container-local services (e.g., `localhost:PORT`). No `network: host`
-   needed.
+1. All steps execute inside the container. `curl` can access container-local
+   services (e.g., `localhost:PORT`). No `network: host` needed.
 
-2. Env vars: `$VAR` in commands/HTTP is substituted by treespec (shell priority).
+2. Env vars: `$VAR` in commands is substituted by treespec (shell priority).
    The `env` field DECLARES required vars — missing → SKIP, not error.
 
 3. Timeout is per-step. `wait.timeout` is total polling time (can exceed step

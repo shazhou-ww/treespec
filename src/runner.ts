@@ -16,7 +16,6 @@ import {
 import { countNodes, allChildren, type TreeNode } from './scanner.js';
 import {
 	executeStep,
-	isExecStepResult,
 	parseDuration,
 	type StepResult,
 } from './steps.js';
@@ -127,8 +126,7 @@ function sleep(ms: number): Promise<void> {
 
 function stepSummaryOf(step: Step): string {
 	if (step.description) return step.description;
-	if (step.type === 'exec') return step.command;
-	return `${step.request.method.toUpperCase()} ${step.request.url}`;
+	return step.command;
 }
 
 function stepFieldsForTrace(stepResult: StepResult): {
@@ -136,17 +134,10 @@ function stepFieldsForTrace(stepResult: StepResult): {
 	stderr: string;
 	exit_code: number;
 } {
-	if (isExecStepResult(stepResult)) {
-		return {
-			stdout: stepResult.stdout,
-			stderr: stepResult.stderr,
-			exit_code: stepResult.exit_code,
-		};
-	}
 	return {
-		stdout: stepResult.body,
-		stderr: '',
-		exit_code: stepResult.status,
+		stdout: stepResult.stdout,
+		stderr: stepResult.stderr,
+		exit_code: stepResult.exit_code,
 	};
 }
 
@@ -399,11 +390,8 @@ export async function runTree(
 	let committed = false;
 	const stepResults: StepResult[] = [];
 
-	const needsContainer = !isPassthrough && (
-		spec.steps.some((s) => s.type === 'exec') ||
-		(spec.postcon?.some((p) => p.steps.some((s) => s.type === 'exec')) ?? false) ||
-		(spec.postcon?.length ?? 0) > 0
-	);
+	// Non-passthrough nodes always need a container (all steps are exec)
+	const needsContainer = !isPassthrough;
 
 	try {
 		if (needsContainer) {

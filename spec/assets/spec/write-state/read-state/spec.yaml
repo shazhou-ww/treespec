@@ -1,7 +1,6 @@
 description: "read parent committed state via greet"
 steps:
-  - type: exec
-    description: "greet reads state inherited from parent commit"
+  - description: "greet reads state inherited from parent commit"
     command: "greet"
     assert:
       type: regex

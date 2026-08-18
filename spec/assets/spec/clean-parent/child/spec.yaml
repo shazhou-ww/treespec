@@ -1,7 +1,6 @@
 description: "child reads parent greet state"
 steps:
-  - type: exec
-    description: "greet config get should return parent's value"
+  - description: "greet config get should return parent's value"
     command: "greet config get name"
     assert:
       type: regex

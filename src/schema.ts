@@ -41,24 +41,16 @@ const AssertionSchema = z.discriminatedUnion('type', [
 	ExitCodeAssertionSchema,
 ]);
 
-// ─── HTTP / Wait ─────────────────────────────────────────────────
-
-const HttpRequestSchema = z.object({
-	method: z.string().min(1),
-	url: z.string().min(1),
-	headers: z.record(z.string()).optional(),
-	body: z.unknown().optional(),
-});
+// ─── Wait ───────────────────────────────────────────────────────
 
 const WaitConfigSchema = z.object({
 	timeout: z.string().min(1),
 	delay: z.string().min(1).optional(),
 });
 
-// ─── Steps (discriminated union; default type = 'exec') ──────────
+// ─── Step ───────────────────────────────────────────────────────
 
 const ExecStepSchema = z.object({
-	type: z.literal('exec'),
 	command: z.string().min(1),
 	cwd: z.string().min(1).optional(),
 	description: z.string().optional(),
@@ -67,21 +59,7 @@ const ExecStepSchema = z.object({
 	wait: WaitConfigSchema.optional(),
 });
 
-const HttpStepSchema = z.object({
-	type: z.literal('http'),
-	request: HttpRequestSchema,
-	description: z.string().optional(),
-	timeout: z.string().min(1).optional(),
-	assert: AssertionSchema.optional(),
-	wait: WaitConfigSchema.optional(),
-});
-
-const StepSchema = z.preprocess((val) => {
-	if (val !== null && typeof val === 'object' && !Array.isArray(val) && !('type' in val)) {
-		return { ...val, type: 'exec' };
-	}
-	return val;
-}, z.discriminatedUnion('type', [ExecStepSchema, HttpStepSchema]));
+const StepSchema = ExecStepSchema;
 
 // ─── PostCondition / Spec ────────────────────────────────────────
 

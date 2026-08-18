@@ -3,7 +3,7 @@
  */
 
 import type { LlmConfig } from './config.js';
-import { isHttpStepResult, type StepResult } from './steps.js';
+import type { StepResult } from './steps.js';
 import type { Spec, Step } from './types.js';
 
 export interface LLMMessage {
@@ -25,19 +25,10 @@ REASON: <one sentence explanation of what went wrong>
 Be strict but fair. Only PASS when the output clearly meets the criteria.`;
 
 function formatStepCommand(step: Step): string {
-	if (step.type === 'http') {
-		return `HTTP ${step.request.method.toUpperCase()} ${step.request.url}`;
-	}
-	return `exec: ${step.command}`;
+	return step.command;
 }
 
 function formatStepOutput(result: StepResult): string {
-	if (isHttpStepResult(result)) {
-		const headerStr = Object.entries(result.headers)
-			.map(([k, v]) => `  ${k}: ${v}`)
-			.join('\n');
-		return `[HTTP ${result.status} ${result.statusText}]\nheaders:\n${headerStr}\nbody:\n${result.body}`;
-	}
 	const stderr = result.stderr;
 	return stderr
 		? `[exit: ${result.exit_code}]\nstdout:\n${result.stdout}\nstderr:\n${stderr}`

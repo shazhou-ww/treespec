@@ -1,7 +1,6 @@
 description: "add broken spec — validate and run should reject"
 steps:
-  - type: exec
-    description: "copy broken spec into project"
+  - description: "copy broken spec into project"
     command: "cp -r /app/spec/assets/spec/broken-spec /workspace/greeting/spec/"
 primary: validate-rejects
 branches:

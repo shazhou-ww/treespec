@@ -1,7 +1,6 @@
 description: "LLM judges greet output"
 steps:
-  - type: exec
-    description: "greet with --name flag for LLM judge"
+  - description: "greet with --name flag for LLM judge"
     command: "greet --name World"
     assert:
       type: llm

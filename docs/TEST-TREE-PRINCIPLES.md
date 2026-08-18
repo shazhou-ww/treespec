@@ -33,7 +33,7 @@ S₀ (base image)
 | ✅ 动词短语 | ❌ 名词/类别 | 区别 |
 |:--|:--|:--|
 | `add-provider` | `providers` | 动词表达"做了什么"；名词无法表达转移 |
-| `run-all` | `http-tests` | 动词表达动作；类别只是分类 |
+| `run-all` | `curl-tests` | 动词表达动作；类别只是分类 |
 | `validate-fresh` | `config` | 动词表达意图；名词只是一个东西 |
 | `show-tree` | `tree` | 动词表达观察；名词只是对象 |
 
@@ -62,13 +62,13 @@ treespec 的核心能力是 **docker commit 状态传递**——父节点的文�
 
 ### step type 正交
 
-exec 和 http 是两种 step 类型，不是两种测试分类。pass/fail 也是变体，不是分类。它们是同一生命周期阶段内的并列变体。
+所有 step 都是 exec 类型（用 curl 做 HTTP 测试）。不要按测试手段分类目录，要按业务意图组织。
 
 ### ❌ 按功能分类（错误）
 
 ```
 spec/
-  http/
+  curl-requests/
     sends-get-request/       自建 fixture、自建 project
     sends-post-request/      自建 fixture、自建 project
   exec/

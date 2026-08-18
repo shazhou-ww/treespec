@@ -77,8 +77,7 @@ treespec run
 ```yaml
 description: "echo hello"
 steps:
-  - type: exec
-    command: "echo hello"
+  - command: "echo hello"
     assert:
       type: regex
       conditions:

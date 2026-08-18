@@ -1,7 +1,6 @@
 description: "leaf under branch b"
 steps:
-  - type: exec
-    description: "echo leaf-b"
+  - description: "echo leaf-b"
     command: "echo leaf-b"
     assert:
       type: regex
